@@ -1,38 +1,28 @@
-export const initialSongs = [
+export type Song = {
+  id: string
+  title: string
+  genre: string | null
+  level: number
+  randomLevel: string | null
+  sRandomLevel: string | null
+}
+
+
+export const initialSongs: Song[] = [
   {
+    id: "song-001",
     title: "曲A",
+    genre: null,
     level: 46,
-    random: {
-      bad: 12,
-      cleared: true,
-    },
-    sRandom: {
-      bad: 27,
-      cleared: false,
-    },
+    randomLevel: "乱○5",
+    sRandomLevel: null,
   },
   {
+    id: "song-002",
     title: "曲B",
+    genre: null,
     level: 47,
-    random: {
-      bad: null,
-      cleared: false,
-    },
-    sRandom: {
-      bad: 35,
-      cleared: true,
-    },
+    randomLevel: "乱○6",
+    sRandomLevel: "S乱Lv5",
   },
-  {
-  title: "曲C",
-  level: 48,
-  random: {
-    bad: null,
-    cleared: false,
-  },
-  sRandom: {
-    bad: null,
-    cleared: false,
-  },
-},
 ]

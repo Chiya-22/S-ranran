@@ -8,6 +8,41 @@ function App() {
   const [mode, setMode] = useState<"RANDOM" | "S-RANDOM">("S-RANDOM")
   const [songs, setSongs] = useState(initialSongs)
 
+  type PlayRecord = {
+    bad: number | null
+    cleared: boolean
+  }
+
+type SongRecords = {
+  [songId: string]: {
+    random: PlayRecord
+    sRandom: PlayRecord
+  }
+}
+
+  const [records, setRecords] = useState<SongRecords>({
+  "song-001": {
+    random: {
+      bad: 12,
+      cleared: true,
+    },
+    sRandom: {
+      bad: 27,
+      cleared: false,
+    },
+  },
+  "song-002": {
+    random: {
+      bad: null,
+      cleared: false,
+    },
+    sRandom: {
+      bad: 35,
+      cleared: true,
+    },
+  },
+})
+
   return (
     <div>
       <h1>S-ranran</h1>
@@ -26,37 +61,39 @@ function App() {
         <SongRow
           key={`${mode}-${song.title}`}
           song={song}
-          record={mode === "RANDOM" ? song.random : song.sRandom}
+          record={
+          mode === "RANDOM"
+            ? records[song.id].random
+            : records[song.id].sRandom
+          }
           onBadChange={(newBad) => {
-            setSongs(
-              songs.map((s) =>
-                s.title === song.title
-                  ? {
-                      ...s,
-                      [mode === "RANDOM" ? "random" : "sRandom"]: {
-                        ...(mode === "RANDOM" ? s.random : s.sRandom),
-                        bad: newBad,
-                      },
-                    }
-                  : s
-              )
-            )
-          }}
+          setRecords({
+            ...records,
+            [song.id]: {
+              ...records[song.id],
+              [mode === "RANDOM" ? "random" : "sRandom"]: {
+                ...(mode === "RANDOM"
+                  ? records[song.id].random
+                  : records[song.id].sRandom),
+                bad: newBad,
+              },
+            },
+          })
+        }}
           onClearedChange={(newCleared) => {
-            setSongs(
-              songs.map((s) =>
-                s.title === song.title
-                  ? {
-                      ...s,
-                      [mode === "RANDOM" ? "random" : "sRandom"]: {
-                        ...(mode === "RANDOM" ? s.random : s.sRandom),
-                        cleared: newCleared,
-                      },
-                    }
-                  : s
-              )
-            )
-          }}
+        setRecords({
+          ...records,
+          [song.id]: {
+            ...records[song.id],
+            [mode === "RANDOM" ? "random" : "sRandom"]: {
+              ...(mode === "RANDOM"
+                ? records[song.id].random
+                : records[song.id].sRandom),
+              cleared: newCleared,
+            },
+          },
+        })
+      }}
         />
       ))}
     </div>

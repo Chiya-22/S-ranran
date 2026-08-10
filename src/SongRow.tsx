@@ -1,12 +1,9 @@
 import { useRef, useState } from "react"
-
+import type { Song } from "./songs"
 
 const BAD_PER_SCREEN = 50
 
-type Song = {
-  title: string
-  level: number
-}
+
 
 type Record = {
   bad: number | null
@@ -34,10 +31,19 @@ function SongRow({
 
   return (
     <div className="song-row">
+      <div className="song-header">
+    <div>
       <h2>{song.title}</h2>
-
       <p>Lv {song.level}</p>
+    </div>
 
+    <button
+      className={`clear-button ${record.cleared ? "cleared" : ""}`}
+      onClick={() => onClearedChange(!record.cleared)}
+    >
+      {record.cleared ? "✓" : ""}
+    </button>
+  </div>
       <div
         className={`bad-display ${isEditing ? "editing" : ""}`}
         onPointerDown={(event) => {

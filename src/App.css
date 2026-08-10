@@ -24,6 +24,19 @@
   margin: 8px 0;
 }
 
+.song-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.clear-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  font-size: 28px;
+}
+
 .bad-display {
   font-size: 32px;
   font-weight: bold;
