@@ -1,35 +1,46 @@
-import { useState } from "react"
+//import { useState } from "react"
 
 type Song = {
   title: string
   level: number
+}
+
+type Record = {
   bad: number | null
   cleared: boolean
 }
 
 type SongRowProps = {
   song: Song
+  record: Record
+  onBadChange: (newBad: number | null) => void
+  onClearedChange: (newCleared: boolean) => void
 }
 
-function SongRow({ song }: SongRowProps) {
-  const [bad, setBad] = useState(song.bad)  
-  const [cleared, setCleared] = useState(song.cleared)
-
+function SongRow({
+  song,
+  record,
+  onBadChange,
+  onClearedChange,
+}: SongRowProps) {
   return (
     <div>
       <h2>{song.title}</h2>
+
       <p>Lv {song.level}</p>
-      <p>BAD {bad ?? "-"}</p>
+
+      <p>BAD {record.bad ?? "-"}</p>
+
       <input
         type="range"
         min="0"
         max="50"
-        value={bad ?? 0}
-        onChange={(event) => setBad(Number(event.target.value))}
-        />
+        value={record.bad ?? 0}
+        onChange={(event) => onBadChange(Number(event.target.value))}
+      />
 
-      <button onClick={() => setCleared(!cleared)}>
-        {cleared ? "✓ クリア済み" : "× 未クリア"}
+      <button onClick={() => onClearedChange(!record.cleared)}>
+        {record.cleared ? "✓ クリア済み" : "× 未クリア"}
       </button>
     </div>
   )
