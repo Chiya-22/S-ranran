@@ -29,6 +29,13 @@
   font-weight: bold;
   text-align: center;
   margin: 8px 0;
+  touch-action: none;
+}
+
+.bad-display.editing {
+  border: 2px solid;
+  border-radius: 8px;
+  padding: 8px;
 }
 
 .hero {

@@ -1,6 +1,6 @@
 import SongRow from "./SongRow"
 import "./App.css"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { initialSongs } from "./songs"
 
 
