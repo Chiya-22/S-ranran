@@ -1,12 +1,14 @@
 import SongRow from "./SongRow"
 import "./App.css"
-import { useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { initialSongs } from "./songs"
 
+const STORAGE_KEY = "songRecords"
 
 function App() {
   const [mode, setMode] = useState<"RANDOM" | "S-RANDOM">("S-RANDOM")
   const [songs, setSongs] = useState(initialSongs)
+  
 
   type PlayRecord = {
     bad: number | null
@@ -20,28 +22,40 @@ type SongRecords = {
   }
 }
 
-  const [records, setRecords] = useState<SongRecords>({
-  "song-001": {
-    random: {
-      bad: 12,
-      cleared: true,
+  
+  const [records, setRecords] = useState<SongRecords>(() => {
+  const savedRecords = localStorage.getItem(STORAGE_KEY)
+
+  if (savedRecords) {
+    return JSON.parse(savedRecords)
+  }
+
+  return {
+    "song-001": {
+      random: {
+        bad: 12,
+        cleared: true,
+      },
+      sRandom: {
+        bad: 27,
+        cleared: false,
+      },
     },
-    sRandom: {
-      bad: 27,
-      cleared: false,
+    "song-002": {
+      random: {
+        bad: null,
+        cleared: false,
+      },
+      sRandom: {
+        bad: 35,
+        cleared: true,
+      },
     },
-  },
-  "song-002": {
-    random: {
-      bad: null,
-      cleared: false,
-    },
-    sRandom: {
-      bad: 35,
-      cleared: true,
-    },
-  },
+  }
 })
+useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
+  }, [records])
 
   return (
     <div>
