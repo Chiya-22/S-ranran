@@ -17,6 +17,20 @@
   }
 }
 
+.song-row {
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px 0;
+}
+
+.bad-display {
+  font-size: 32px;
+  font-weight: bold;
+  text-align: center;
+  margin: 8px 0;
+}
+
 .hero {
   position: relative;
 

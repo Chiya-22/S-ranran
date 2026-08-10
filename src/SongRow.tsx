@@ -24,12 +24,14 @@ function SongRow({
   onClearedChange,
 }: SongRowProps) {
   return (
-    <div>
+    <div className="song-row">
       <h2>{song.title}</h2>
 
       <p>Lv {song.level}</p>
 
-      <p>BAD {record.bad ?? "-"}</p>
+      <div className="bad-display">
+        BAD {record.bad ?? "-"}
+        </div>
 
       <input
         type="range"

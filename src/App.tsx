@@ -1,33 +1,8 @@
 import SongRow from "./SongRow"
 import "./App.css"
 import { useState } from "react"
+import { initialSongs } from "./songs"
 
-const initialSongs = [
-  {
-    title: "曲A",
-    level: 46,
-    random: {
-      bad: 12,
-      cleared: true,
-    },
-    sRandom: {
-      bad: 27,
-      cleared: false,
-    },
-  },
-  {
-    title: "曲B",
-    level: 47,
-    random: {
-      bad: null,
-      cleared: false,
-    },
-    sRandom: {
-      bad: 35,
-      cleared: true,
-    },
-  },
-]
 
 function App() {
   const [mode, setMode] = useState<"RANDOM" | "S-RANDOM">("S-RANDOM")
