@@ -44,7 +44,7 @@ function App() {
   const [songs] = useState(initialSongs)
 
   const [page, setPage] =
-    useState<"ALL" | "RANDOM" | "S-RANDOM">("ALL")
+    useState<"ALL" | "RANDOM" | "S-RANDOM">("S-RANDOM")
 
   const [selectedLevel, setSelectedLevel] =
     useState<string | null>(null)
@@ -159,6 +159,7 @@ function App() {
               <label>
                 表示レベル：
                 <select
+                  className="level-select"
                   value={minLevel}
                   onChange={(event) =>
                     setMinLevel(
@@ -182,6 +183,7 @@ function App() {
                 {" ～ "}
 
                 <select
+                  className="level-select"
                   value={maxLevel}
                   onChange={(event) =>
                     setMaxLevel(
@@ -208,6 +210,7 @@ function App() {
               <label>
                 並び順：
                 <select
+                  className="level-select"
                   value={levelOrder}
                   onChange={(event) =>
                     setLevelOrder(
