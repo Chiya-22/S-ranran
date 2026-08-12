@@ -8,7 +8,10 @@ const STORAGE_KEY = "songRecords"
 function App() {
   const [mode, setMode] = useState<"RANDOM" | "S-RANDOM">("S-RANDOM")
   const [songs, setSongs] = useState(initialSongs)
+  const [page, setPage] = useState<"ALL" | "RANDOM" | "S-RANDOM">("ALL")
   
+  const displayMode =
+  page === "S-RANDOM" ? "S-RANDOM" : "RANDOM"
 
   type PlayRecord = {
     bad: number | null
@@ -59,6 +62,22 @@ useEffect(() => {
 
   return (
     <div>
+
+    <div className="page-tabs">
+  <button onClick={() => setPage("ALL")}>
+    全曲
+  </button>
+
+  <button onClick={() => setPage("RANDOM")}>
+    RANDOM
+  </button>
+
+  <button onClick={() => setPage("S-RANDOM")}>
+    S-RANDOM
+  </button>
+</div>
+
+    <div>
       <h1>S-ranran</h1>
 
       <button onClick={() => setMode("RANDOM")}>
@@ -71,7 +90,19 @@ useEffect(() => {
 
       <p>現在のモード：{mode}</p>
 
-      {songs.map((song) => (
+      {songs
+        .filter((song) => {
+          if (page === "ALL") {
+            return true
+          }
+
+          if (page === "RANDOM") {
+            return song.randomLevel !== null
+          }
+
+          return song.sRandomLevel !== null
+        })
+      .map((song) => (
         <SongRow
           key={`${mode}-${song.title}`}
           song={song}
@@ -110,6 +141,8 @@ useEffect(() => {
       }}
         />
       ))}
+    </div>
+
     </div>
   )
 }
