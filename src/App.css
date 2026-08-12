@@ -51,6 +51,19 @@
   padding: 8px;
 }
 
+.folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.folder-button {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
 .hero {
   position: relative;
 

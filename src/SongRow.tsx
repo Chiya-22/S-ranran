@@ -6,28 +6,57 @@ const BAD_PER_SCREEN = 50
 
 
 type Record = {
-  bad: number | null
-  cleared: boolean
+  plays: number
+  clears: number
+  badHistory: number[]
 }
 
 type SongRowProps = {
   song: Song
   record: Record
-  onBadChange: (newBad: number | null) => void
-  onClearedChange: (newCleared: boolean) => void
+  onRecordChange: (newRecord: Record) => void
 }
 
 function SongRow({
   song,
   record,
-  onBadChange,
-  onClearedChange,
+  onRecordChange,
 }: SongRowProps) {
     const [isEditing, setIsEditing] = useState(false)
     const timerRef = useRef<number | null>(null)
     const startXRef = useRef<number | null>(null)
     const startBadRef = useRef<number>(0)
     const hasMovedRef = useRef(false)
+
+    const [bad, setBad] = useState<number | null>(
+    record.badHistory.length > 0
+      ? record.badHistory[record.badHistory.length - 1]
+      : null
+  )
+
+  const [result, setResult] = useState<"CLEAR" | "FAILED" | null>(null)
+
+  const handleConfirm = () => {
+    if (result === null || bad === null) {
+      return
+    }
+
+    const newBadHistory = [...record.badHistory, bad].slice(-10)
+
+    onRecordChange({
+      plays: record.plays + 1,
+      clears: record.clears + (result === "CLEAR" ? 1 : 0),
+      badHistory: newBadHistory,
+    })
+
+    setResult(null)
+  }
+
+  const bestBad =
+    record.badHistory.length > 0
+      ? Math.min(...record.badHistory)
+      : null
+
 
   return (
     <div className="song-row">
@@ -38,12 +67,33 @@ function SongRow({
     </div>
 
     <button
-      className={`clear-button ${record.cleared ? "cleared" : ""}`}
-      onClick={() => onClearedChange(!record.cleared)}
-    >
-      {record.cleared ? "✓" : ""}
-    </button>
+          onClick={() => setResult("CLEAR")}
+        >
+          {result === "CLEAR" ? "● CLEAR" : "CLEAR"}
+        </button>
+
+        <button
+          onClick={() => setResult("FAILED")}
+        >
+          {result === "FAILED" ? "● FAILED" : "FAILED"}
+        </button>
   </div>
+
+        <button
+        onClick={handleConfirm}
+        disabled={result === null || bad === null}
+      >
+        確定
+      </button>
+
+      <div>
+        CLEAR {record.clears} / {record.plays}
+      </div>
+
+      <div>
+        BEST BAD {bestBad ?? "-"}
+      </div>
+
       <div
         className={`bad-display ${isEditing ? "editing" : ""}`}
         onPointerDown={(event) => {
@@ -51,7 +101,7 @@ function SongRow({
             hasMovedRef.current = false
 
             timerRef.current = window.setTimeout(() => {
-            startBadRef.current = record.bad ?? 0
+            startBadRef.current = bad ?? 0
             setIsEditing(true)
             console.log("編集モード開始")
             }, 500)
@@ -73,7 +123,7 @@ function SongRow({
             0,
             startBadRef.current + badChange
             )
-            onBadChange(newBad)
+            setBad(newBad)
 
             console.log("移動距離:", distance)
             console.log("BAD変化量:", badChange)
@@ -104,7 +154,7 @@ function SongRow({
         }}
         >
             {isEditing && <span>← </span>}
-            BAD {record.bad ?? "-"}
+            BAD {bad ?? "-"}
             {isEditing && <span> →</span>}
                     
         </div>
@@ -113,13 +163,10 @@ function SongRow({
         type="range"
         min="0"
         max="50"
-        value={record.bad ?? 0}
-        onChange={(event) => onBadChange(Number(event.target.value))}
+        value={bad ?? 0}
+        onChange={(event) => setBad(Number(event.target.value))}
       />
 
-      <button onClick={() => onClearedChange(!record.cleared)}>
-        {record.cleared ? "✓ クリア済み" : "× 未クリア"}
-      </button>
     </div>
   )
 }
