@@ -3,10 +3,14 @@ import type { Song } from "./songs"
 
 const BAD_PER_SCREEN = 50
 
+type PlayResult = {
+  result: "CLEAR" | "FAILED"
+  bad: number
+  playedAt: string
+}
+
 type Record = {
-  plays: number
-  clears: number
-  badHistory: number[]
+  history: PlayResult[]
 }
 
 type SongRowProps = {
@@ -22,45 +26,75 @@ function SongRow({
 }: SongRowProps) {
   const [isEditing, setIsEditing] = useState(false)
 
+  //userefを使って、BADの編集モード中の状態を管理する
   const timerRef = useRef<number | null>(null)
   const startXRef = useRef<number | null>(null)
   const startBadRef = useRef(0)
   const hasMovedRef = useRef(false)
 
+  // BADの状態を管理する
   const [bad, setBad] = useState<number | null>(
-    record.badHistory.length > 0
-      ? record.badHistory[record.badHistory.length - 1]
+    record.history.length > 0
+      ? record.history[record.history.length - 1].bad
       : null
   )
 
   const [result, setResult] =
     useState<"CLEAR" | "FAILED" | null>(null)
 
+    // 確定ボタンが押されたときの処理
   const handleConfirm = () => {
     if (result === null || bad === null) {
       return
     }
 
-    const newBadHistory = [
-      ...record.badHistory,
-      bad,
-    ].slice(-10)
+    const newResult: PlayResult = {
+    result,
+    bad,
+    playedAt: new Date().toISOString(),
+    }
 
     onRecordChange({
-      plays: record.plays + 1,
-      clears:
-        record.clears +
-        (result === "CLEAR" ? 1 : 0),
-      badHistory: newBadHistory,
+    history: [...record.history, newResult],
     })
 
     setResult(null)
   }
 
-  const bestBad =
-    record.badHistory.length > 0
-      ? Math.min(...record.badHistory)
-      : null
+    // =========================
+    // ★ 統計情報はここ
+    // =========================
+
+  const plays = record.history.length
+
+const clears = record.history.filter(
+  (play) => play.result === "CLEAR"
+).length
+
+const clearRate =
+  plays > 0
+    ? Math.round((clears / plays) * 100)
+    : null
+
+const bestBad =
+  record.history.length > 0
+    ? Math.min(...record.history.map((play) => play.bad))
+    : null
+
+const recent10 = record.history.slice(-10)
+
+const recent10AverageBad =
+  recent10.length > 0
+    ? Math.round(
+        recent10.reduce((sum, play) => sum + play.bad, 0) /
+          recent10.length
+      )
+    : null
+
+
+  // =========================
+  // ★ ここから画面
+  // =========================
 
   return (
     <div className="song-row">
@@ -89,24 +123,33 @@ function SongRow({
             </div>
 
           <div className="song-stat">
-            CLEAR {record.clears} / {record.plays}
+            CLEAR {clears} / {plays}
           </div>
 
           <div className="song-stat">
-            <span className="stat-label">BEST BAD</span>
+            <span className="stat-label">CLEAR率</span>
+            <span className="stat-value">
+                {clearRate !== null
+                ? `${clearRate}%`
+                : "-"}
+            </span>
+            </div>
+
+          <div className="song-stat">
+            <span className="stat-label">最小BAD</span>
             <span className="stat-value">{bestBad ?? "-"}</span>
             </div>
 
             <div className="song-stat">
-            <span className="stat-label">CLEAR率</span>
-            <span className="stat-value">
-                {record.plays > 0
-                ? `${Math.round(
-                    (record.clears / record.plays) * 100
-                    )}%`
-                : "-"}
-            </span>
-            </div>
+          <span className="stat-label">
+            平均BAD
+          </span>
+
+          <span className="stat-value">
+            {recent10AverageBad ?? "-"}
+          </span>
+        </div>
+            
 
         </div>
 
@@ -134,6 +177,7 @@ function SongRow({
               isEditing ? "editing" : ""
             }`}
             onPointerDown={(event) => {
+                event.preventDefault()
               startXRef.current =
                 event.clientX
 
@@ -149,9 +193,10 @@ function SongRow({
                   console.log(
                     "編集モード開始"
                   )
-                }, 500)
+                }, 300)
             }}
             onPointerMove={(event) => {
+              event.preventDefault()
               if (
                 !isEditing ||
                 startXRef.current === null

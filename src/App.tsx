@@ -3,12 +3,16 @@ import "./App.css"
 import { useEffect, useState } from "react"
 import { initialSongs } from "./songs"
 
-const STORAGE_KEY = "songRecords"
+const STORAGE_KEY = "songRecords-v2"
+
+type PlayResult = {
+  result: "CLEAR" | "FAILED"
+  bad: number
+  playedAt: string
+}
 
 type PlayRecord = {
-  plays: number
-  clears: number
-  badHistory: number[]
+  history: PlayResult[]
 }
 
 type SongRecords = {
@@ -19,11 +23,8 @@ type SongRecords = {
 }
 
 const createEmptyRecord = (): PlayRecord => ({
-  plays: 0,
-  clears: 0,
-  badHistory: [],
+  history: [],
 })
-
 const createInitialRecords = (): SongRecords => {
   const records: SongRecords = {}
 
