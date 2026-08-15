@@ -25,6 +25,7 @@ function SongRow({
   onRecordChange,
 }: SongRowProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
 
   //userefを使って、BADの編集モード中の状態を管理する
   const timerRef = useRef<number | null>(null)
@@ -149,7 +150,70 @@ const recent10AverageBad =
             {recent10AverageBad ?? "-"}
           </span>
         </div>
-            
+
+        <button
+            className="history-button"
+            onClick={() => setShowHistory(true)}
+            >
+            プレイ履歴
+          </button>
+
+        
+  {showHistory && (
+  <div
+    className="history-overlay"
+    onClick={() => setShowHistory(false)}
+  >
+    <div
+      className="history-modal"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="history-header">
+        <span>プレイ履歴</span>
+
+        <button
+          onClick={() => setShowHistory(false)}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="history-list">
+        {record.history.length === 0 ? (
+        <div className="history-empty">
+        まだプレイ履歴がありません
+        </div>
+    ) : (record.history
+          .slice()
+          .reverse()
+          .map((play, index) => {
+            const date = new Date(play.playedAt)
+
+            return (
+              <div
+                className="history-item"
+                key={`${play.playedAt}-${index}`}
+              >
+                <span>
+                  {date.toLocaleDateString("ja-JP")}
+                </span>
+
+                <span>
+                  {play.result}
+                </span>
+
+                <span>
+                  BAD {play.bad}
+                </span>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
+  </div>
+
+)}     
 
         </div>
 
