@@ -252,6 +252,35 @@
   font-size: 16px;
 }
 
+.song-list-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sort-control,
+.filter-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.song-list-controls select {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .song-list-controls {
+    gap: 8px;
+  }
+
+  .song-list-controls select {
+    padding: 8px;
+  }
+}
+
 .hero {
   position: relative;
 

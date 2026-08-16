@@ -50,6 +50,27 @@ function App() {
   const [selectedLevel, setSelectedLevel] =
     useState<string | null>(null)
 
+  type FilterOption =
+  | "ALL"
+  | "UNPLAYED"
+  | "PLAYED"
+  | "CLEARED"
+  | "UNCLEARED"
+
+const [filterOption, setFilterOption] =
+  useState<FilterOption>("ALL")
+
+  type SortOption =
+  | "LEVEL_ASC"
+  | "LEVEL_DESC"
+  | "TITLE_ASC"
+  | "TITLE_DESC"
+  | "BEST_BAD_ASC"
+  | "CLEAR_RATE_DESC"
+
+const [sortOption, setSortOption] =
+  useState<SortOption>("LEVEL_DESC")
+
   const [minLevel, setMinLevel] = useState(10)
   const [maxLevel, setMaxLevel] = useState(19)
 
@@ -73,6 +94,132 @@ function App() {
       JSON.stringify(records)
     )
   }, [records])
+
+const displayedSongs = songs
+  .filter((song) => {
+    if (page === "ALL") {
+      return true
+    }
+
+    if (page === "RANDOM") {
+      return song.randomLevel !== null
+    }
+
+    return song.sRandomLevel !== null
+  })
+  .filter((song) => {
+    if (selectedLevel === null) {
+      return true
+    }
+
+    const level =
+      page === "RANDOM"
+        ? song.randomLevel
+        : song.sRandomLevel
+
+    return String(level) === selectedLevel
+  })
+  .filter((song) => {
+    const record =
+      mode === "RANDOM"
+        ? records[song.id].random
+        : records[song.id].sRandom
+
+    const plays = record.history.length
+
+    const clears = record.history.filter(
+      (play) => play.result === "CLEAR"
+    ).length
+
+    switch (filterOption) {
+      case "ALL":
+        return true
+
+      case "UNPLAYED":
+        return plays === 0
+
+      case "PLAYED":
+        return plays > 0
+
+      case "CLEARED":
+        return clears > 0
+
+      case "UNCLEARED":
+        return clears === 0
+    }
+  })
+
+  .slice()
+
+  displayedSongs.sort((a, b) => {
+  const recordA =
+    mode === "RANDOM"
+      ? records[a.id].random
+      : records[a.id].sRandom
+
+  const recordB =
+    mode === "RANDOM"
+      ? records[b.id].random
+      : records[b.id].sRandom
+
+  switch (sortOption) {
+    case "LEVEL_ASC": {
+      return a.level - b.level
+    }
+
+    case "LEVEL_DESC": {
+      return b.level - a.level
+    }
+
+    case "TITLE_ASC":
+      return a.title.localeCompare(b.title, "ja")
+
+    case "TITLE_DESC":
+      return b.title.localeCompare(a.title, "ja")
+
+    case "BEST_BAD_ASC": {
+      const bestA =
+        recordA.history.length > 0
+          ? Math.min(
+              ...recordA.history.map(
+                (play) => play.bad
+              )
+            )
+          : Infinity
+
+      const bestB =
+        recordB.history.length > 0
+          ? Math.min(
+              ...recordB.history.map(
+                (play) => play.bad
+              )
+            )
+          : Infinity
+
+      return bestA - bestB
+    }
+
+    case "CLEAR_RATE_DESC": {
+      const clearRateA =
+        recordA.history.length > 0
+          ? recordA.history.filter(
+              (play) => play.result === "CLEAR"
+            ).length /
+            recordA.history.length
+          : -1
+
+      const clearRateB =
+        recordB.history.length > 0
+          ? recordB.history.filter(
+              (play) => play.result === "CLEAR"
+            ).length /
+            recordB.history.length
+          : -1
+
+      return clearRateB - clearRateA
+    }
+  }
+})
 
   const sRandomLevels = Array.from(
     new Set(
@@ -259,47 +406,111 @@ function App() {
               </button>
             )}
 
-            {songs
-              .filter((song) => {
-                if (page === "ALL") {
-                  return true
-                }
+            <div className="song-list-controls">
 
-                if (page === "RANDOM") {
-                  return song.randomLevel !== null
-                }
+  <div className="filter-control">
+    <label htmlFor="filter-select">
+      フィルタ
+    </label>
 
-                return (
-                  song.sRandomLevel ===
-                  selectedLevel
-                )
-              })
-              .map((song) => {
-                const record =
-                  mode === "RANDOM"
-                    ? records[song.id].random
-                    : records[song.id].sRandom
+    <select
+      id="filter-select"
+      value={filterOption}
+      onChange={(event) =>
+        setFilterOption(
+          event.target.value as FilterOption
+        )
+      }
+    >
+        <option value="ALL">
+          すべて
+        </option>
 
-                return (
-                  <SongRow
-                    key={`${mode}-${song.id}`}
-                    song={song}
-                    record={record}
-                    onRecordChange={(newRecord) => {
-                      setRecords((prev) => ({
-                        ...prev,
-                        [song.id]: {
-                          ...prev[song.id],
-                          [mode === "RANDOM"
-                            ? "random"
-                            : "sRandom"]:
-                            newRecord,
-                        },
-                      }))
-                    }}
-                  />
-                )
-              })}
+        <option value="UNPLAYED">
+          未プレイ
+        </option>
+
+        <option value="PLAYED">
+          プレイ済み
+        </option>
+
+        <option value="CLEARED">
+          クリア済み
+        </option>
+
+        <option value="UNCLEARED">
+          未クリア
+        </option>
+      </select>
+    </div>
+
+    <div className="sort-controls">
+  <label htmlFor="sort-select">
+    並び順
+  </label>
+
+  <select
+    id="sort-select"
+    value={sortOption}
+    onChange={(event) =>
+      setSortOption(
+        event.target.value as SortOption
+      )
+    }
+  >
+    <option value="LEVEL_ASC">
+      レベル昇順
+    </option>
+
+    <option value="LEVEL_DESC">
+      レベル降順
+    </option>
+
+    <option value="TITLE_ASC">
+      曲名順
+    </option>
+
+    <option value="TITLE_DESC">
+      曲名逆順
+    </option>
+
+    <option value="BEST_BAD_ASC">
+      最小BADが少ない順
+    </option>
+
+    <option value="CLEAR_RATE_DESC">
+      CLEAR率が高い順
+    </option>
+  </select>
+</div>
+
+  </div>
+
+            {displayedSongs.map((song) => {
+              const record =
+                mode === "RANDOM"
+                  ? records[song.id].random
+                  : records[song.id].sRandom
+
+              return (
+                <SongRow
+                  key={`${mode}-${song.id}`}
+                  song={song}
+                  record={record}
+                  onRecordChange={(newRecord) => {
+                    setRecords((prev) => ({
+                      ...prev,
+                      [song.id]: {
+                        ...prev[song.id],
+                        [mode === "RANDOM"
+                          ? "random"
+                          : "sRandom"]: newRecord,
+                      },
+                    }))
+                  }}
+                />
+              )
+            })}
           </>
         )}
       </div>
