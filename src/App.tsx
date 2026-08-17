@@ -50,6 +50,9 @@ function App() {
   const [selectedLevel, setSelectedLevel] =
     useState<string | null>(null)
 
+    const [showDataMigration, setShowDataMigration] =
+  useState(false)
+
   type FilterOption =
   | "ALL"
   | "UNPLAYED"
@@ -94,6 +97,82 @@ const [sortOption, setSortOption] =
       JSON.stringify(records)
     )
   }, [records])
+
+  const handleExport = () => {
+  const exportData = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    records,
+  }
+
+  const json = JSON.stringify(exportData, null, 2)
+
+  const blob = new Blob(
+    [json],
+    { type: "application/json" }
+  )
+
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement("a")
+  link.href = url
+  link.download = "s-ranran-backup.json"
+
+  link.click()
+
+  URL.revokeObjectURL(url)
+}
+
+const handleImport = (
+  event: React.ChangeEvent<HTMLInputElement>
+) => {
+  const file = event.target.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  const reader = new FileReader()
+
+  reader.onload = () => {
+    try {
+      const text = reader.result
+
+      if (typeof text !== "string") {
+        throw new Error("ファイルを読み込めませんでした")
+      }
+
+      const data = JSON.parse(text)
+
+      if (data.version !== 1) {
+        throw new Error(
+          "対応していないバックアップ形式です"
+        )
+      }
+
+      if (!data.records) {
+        throw new Error(
+          "recordsが存在しません"
+        )
+      }
+
+      setRecords(data.records)
+
+      alert("データを読み込みました")
+    } catch (error) {
+      console.error(error)
+
+      alert(
+        "データの読み込みに失敗しました"
+      )
+    }
+  }
+
+  reader.readAsText(file)
+
+  // 同じファイルを再度選択できるようにする
+  event.target.value = ""
+}
 
 const displayedSongs = songs
   .filter((song) => {
@@ -283,6 +362,16 @@ const displayedSongs = songs
         >
           S-RANDOM
         </button>
+
+      </div>
+
+      <div className="data-migration-container">
+      <button
+        className="data-migration-button"
+        onClick={() => setShowDataMigration(true)}
+      >
+        データを移行する
+      </button>
       </div>
 
       <div>
@@ -514,6 +603,54 @@ const displayedSongs = songs
           </>
         )}
       </div>
+{showDataMigration && (
+  <div
+    className="data-migration-overlay"
+    onClick={() => setShowDataMigration(false)}
+  >
+    <div
+      className="data-migration-modal"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="data-migration-header">
+        <h2>データを移行する</h2>
+
+        <button
+          onClick={() => setShowDataMigration(false)}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="data-migration-content">
+
+        <p>
+          プレイ履歴などのデータを
+          バックアップ・復元できます。
+        </p>
+
+        <button
+          onClick={handleExport}
+          className="migration-action-button"
+        >
+          データを書き出す
+        </button>
+
+        <label className="migration-action-button">
+          データを読み込む
+
+          <input
+            type="file"
+            accept=".json,application/json"
+            onChange={handleImport}
+            hidden
+          />
+        </label>
+
+      </div>
+    </div>
+  </div>
+)}
     </div>
   )
 }
