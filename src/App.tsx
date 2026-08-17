@@ -1,121 +1,679 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import SongRow from "./SongRow"
+import "./App.css"
+import { useEffect, useState } from "react"
+import { initialSongs } from "./songs"
+
+const STORAGE_KEY = "songRecords-v2"
+
+type PlayResult = {
+  result: "CLEAR" | "FAILED"
+  bad: number
+  playedAt: string
+}
+
+type PlayRecord = {
+  history: PlayResult[]
+}
+
+type SongRecords = {
+  [songId: string]: {
+    random: PlayRecord
+    sRandom: PlayRecord
+  }
+}
+
+const createEmptyRecord = (): PlayRecord => ({
+  history: [],
+})
+const createInitialRecords = (): SongRecords => {
+  const records: SongRecords = {}
+
+  for (const song of initialSongs) {
+    records[song.id] = {
+      random: createEmptyRecord(),
+      sRandom: createEmptyRecord(),
+    }
+  }
+
+  return records
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [mode, setMode] =
+    useState<"RANDOM" | "S-RANDOM">("S-RANDOM")
+
+  const [songs] = useState(initialSongs)
+
+  const [page, setPage] =
+    useState<"ALL" | "RANDOM" | "S-RANDOM">("S-RANDOM")
+
+  const [selectedLevel, setSelectedLevel] =
+    useState<string | null>(null)
+
+    const [showDataMigration, setShowDataMigration] =
+  useState(false)
+
+  type FilterOption =
+  | "ALL"
+  | "UNPLAYED"
+  | "PLAYED"
+  | "CLEARED"
+  | "UNCLEARED"
+
+const [filterOption, setFilterOption] =
+  useState<FilterOption>("ALL")
+
+  type SortOption =
+  | "LEVEL_ASC"
+  | "LEVEL_DESC"
+  | "TITLE_ASC"
+  | "TITLE_DESC"
+  | "BEST_BAD_ASC"
+  | "CLEAR_RATE_DESC"
+
+const [sortOption, setSortOption] =
+  useState<SortOption>("LEVEL_DESC")
+
+  const [minLevel, setMinLevel] = useState(10)
+  const [maxLevel, setMaxLevel] = useState(19)
+
+  const [levelOrder, setLevelOrder] =
+    useState<"ASC" | "DESC">("ASC")
+
+  const [records, setRecords] = useState<SongRecords>(() => {
+    const savedRecords =
+      localStorage.getItem(STORAGE_KEY)
+
+    if (savedRecords) {
+      return JSON.parse(savedRecords)
+    }
+
+    return createInitialRecords()
+  })
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(records)
+    )
+  }, [records])
+
+  const handleExport = () => {
+  const exportData = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    records,
+  }
+
+  const json = JSON.stringify(exportData, null, 2)
+
+  const blob = new Blob(
+    [json],
+    { type: "application/json" }
+  )
+
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement("a")
+  link.href = url
+  link.download = "s-ranran-backup.json"
+
+  link.click()
+
+  URL.revokeObjectURL(url)
+}
+
+const handleImport = (
+  event: React.ChangeEvent<HTMLInputElement>
+) => {
+  const file = event.target.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  const reader = new FileReader()
+
+  reader.onload = () => {
+    try {
+      const text = reader.result
+
+      if (typeof text !== "string") {
+        throw new Error("ファイルを読み込めませんでした")
+      }
+
+      const data = JSON.parse(text)
+
+      if (data.version !== 1) {
+        throw new Error(
+          "対応していないバックアップ形式です"
+        )
+      }
+
+      if (!data.records) {
+        throw new Error(
+          "recordsが存在しません"
+        )
+      }
+
+      setRecords(data.records)
+
+      alert("データを読み込みました")
+    } catch (error) {
+      console.error(error)
+
+      alert(
+        "データの読み込みに失敗しました"
+      )
+    }
+  }
+
+  reader.readAsText(file)
+
+  // 同じファイルを再度選択できるようにする
+  event.target.value = ""
+}
+
+const displayedSongs = songs
+  .filter((song) => {
+    if (page === "ALL") {
+      return true
+    }
+
+    if (page === "RANDOM") {
+      return song.randomLevel !== null
+    }
+
+    return song.sRandomLevel !== null
+  })
+  .filter((song) => {
+    if (selectedLevel === null) {
+      return true
+    }
+
+    const level =
+      page === "RANDOM"
+        ? song.randomLevel
+        : song.sRandomLevel
+
+    return String(level) === selectedLevel
+  })
+  .filter((song) => {
+    const record =
+      mode === "RANDOM"
+        ? records[song.id].random
+        : records[song.id].sRandom
+
+    const plays = record.history.length
+
+    const clears = record.history.filter(
+      (play) => play.result === "CLEAR"
+    ).length
+
+    switch (filterOption) {
+      case "ALL":
+        return true
+
+      case "UNPLAYED":
+        return plays === 0
+
+      case "PLAYED":
+        return plays > 0
+
+      case "CLEARED":
+        return clears > 0
+
+      case "UNCLEARED":
+        return clears === 0
+    }
+  })
+
+  .slice()
+
+  displayedSongs.sort((a, b) => {
+  const recordA =
+    mode === "RANDOM"
+      ? records[a.id].random
+      : records[a.id].sRandom
+
+  const recordB =
+    mode === "RANDOM"
+      ? records[b.id].random
+      : records[b.id].sRandom
+
+  switch (sortOption) {
+    case "LEVEL_ASC": {
+      return a.level - b.level
+    }
+
+    case "LEVEL_DESC": {
+      return b.level - a.level
+    }
+
+    case "TITLE_ASC":
+      return a.title.localeCompare(b.title, "ja")
+
+    case "TITLE_DESC":
+      return b.title.localeCompare(a.title, "ja")
+
+    case "BEST_BAD_ASC": {
+      const bestA =
+        recordA.history.length > 0
+          ? Math.min(
+              ...recordA.history.map(
+                (play) => play.bad
+              )
+            )
+          : Infinity
+
+      const bestB =
+        recordB.history.length > 0
+          ? Math.min(
+              ...recordB.history.map(
+                (play) => play.bad
+              )
+            )
+          : Infinity
+
+      return bestA - bestB
+    }
+
+    case "CLEAR_RATE_DESC": {
+      const clearRateA =
+        recordA.history.length > 0
+          ? recordA.history.filter(
+              (play) => play.result === "CLEAR"
+            ).length /
+            recordA.history.length
+          : -1
+
+      const clearRateB =
+        recordB.history.length > 0
+          ? recordB.history.filter(
+              (play) => play.result === "CLEAR"
+            ).length /
+            recordB.history.length
+          : -1
+
+      return clearRateB - clearRateA
+    }
+  }
+})
+
+  const sRandomLevels = Array.from(
+    new Set(
+      songs
+        .map((song) => song.sRandomLevel)
+        .filter(
+          (level): level is string =>
+            level !== null
+        )
+    )
+  )
+
+  const filteredSRandomLevels = sRandomLevels
+    .filter((level) => {
+      const levelNumber =
+        Number(level.replace("S乱Lv", ""))
+
+      return (
+        levelNumber >= minLevel &&
+        levelNumber <= maxLevel
+      )
+    })
+    .sort((a, b) => {
+      const aNumber =
+        Number(a.replace("S乱Lv", ""))
+
+      const bNumber =
+        Number(b.replace("S乱Lv", ""))
+
+      return levelOrder === "ASC"
+        ? aNumber - bNumber
+        : bNumber - aNumber
+    })
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
+    <div>
+      <div className="page-tabs">
         <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          onClick={() => {
+            setPage("ALL")
+            setSelectedLevel(null)
+          }}
         >
-          Count is {count}
+          全曲
         </button>
-      </section>
 
-      <div className="ticks"></div>
+        <button
+          onClick={() => {
+            setPage("RANDOM")
+            setSelectedLevel(null)
+          }}
+        >
+          RANDOM
+        </button>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <button
+          onClick={() => {
+            setPage("S-RANDOM")
+            setSelectedLevel(null)
+          }}
+        >
+          S-RANDOM
+        </button>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      </div>
+
+      <div className="data-migration-container">
+      <button
+        className="data-migration-button"
+        onClick={() => setShowDataMigration(true)}
+      >
+        データを移行する
+      </button>
+      </div>
+
+      <div>
+        <h1>S-ranran</h1>
+
+        <button onClick={() => setMode("RANDOM")}>
+          RANDOM
+        </button>
+
+        <button onClick={() => setMode("S-RANDOM")}>
+          S-RANDOM
+        </button>
+
+        <p>現在のモード：{mode}</p>
+
+        {page === "S-RANDOM" &&
+        selectedLevel === null ? (
+          <div>
+            <h2>S-RANDOM レベル一覧</h2>
+
+            <div> {/* レベルの範囲を選択するUI folder filter */}
+              <label>
+                表示レベル：
+                <select
+                  className="level-select"
+                  value={minLevel}
+                  onChange={(event) =>
+                    setMinLevel(
+                      Number(event.target.value)
+                    )
+                  }
+                >
+                  {Array.from(
+                    { length: 19 },
+                    (_, i) => i + 1
+                  ).map((level) => (
+                    <option
+                      key={level}
+                      value={level}
+                    >
+                      Lv{level}
+                    </option>
+                  ))}
+                </select>
+
+                {" ～ "}
+
+                <select
+                  className="level-select"
+                  value={maxLevel}
+                  onChange={(event) =>
+                    setMaxLevel(
+                      Number(event.target.value)
+                    )
+                  }
+                >
+                  {Array.from(
+                    { length: 19 },
+                    (_, i) => i + 1
+                  ).map((level) => (
+                    <option
+                      key={level}
+                      value={level}
+                    >
+                      Lv{level}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div> {/* レベルの並び順を選択するUI folder sort */}
+              <label>
+                並び順：
+                <select
+                  className="level-select"
+                  value={levelOrder}
+                  onChange={(event) =>
+                    setLevelOrder(
+                      event.target.value as
+                        | "ASC"
+                        | "DESC"
+                    )
+                  }
+                >
+                  <option value="ASC">
+                    昇順
+                  </option>
+                  <option value="DESC">
+                    降順
+                  </option>
+                </select>
+              </label>
+            </div>
+
+            {/* レベルの一覧を表示するUI folder list */}
+          <div className="folder-list">
+            {filteredSRandomLevels.map((level) => {
+              const levelSongs = songs.filter((song) => {
+                return song.sRandomLevel === level
+              })
+
+              const clearCount = levelSongs.filter((song) => {
+                const record = records[song.id].sRandom
+
+                return record.history.some(
+                  (play) => play.result === "CLEAR"
+                )
+              }).length
+
+              return (
+                <button
+                  className="folder-button"
+                  key={level}
+                  onClick={() =>
+                    setSelectedLevel(level)
+                  }
+                >
+                  <div className="folder-level">
+                    📁 {level}
+                  </div>
+
+                  <div className="folder-progress">
+                    {clearCount} / {levelSongs.length}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          </div>
+        ) : (
+          <>
+            {page === "S-RANDOM" && (
+              <button
+                onClick={() =>
+                  setSelectedLevel(null)
+                }
+              >
+                ← レベル一覧に戻る
+              </button>
+            )}
+
+            <div className="song-list-controls">
+
+  <div className="filter-control">
+    <label htmlFor="filter-select">
+      フィルタ
+    </label>
+
+    <select
+      id="filter-select"
+      value={filterOption}
+      onChange={(event) =>
+        setFilterOption(
+          event.target.value as FilterOption
+        )
+      }
+    >
+        <option value="ALL">
+          すべて
+        </option>
+
+        <option value="UNPLAYED">
+          未プレイ
+        </option>
+
+        <option value="PLAYED">
+          プレイ済み
+        </option>
+
+        <option value="CLEARED">
+          クリア済み
+        </option>
+
+        <option value="UNCLEARED">
+          未クリア
+        </option>
+      </select>
+    </div>
+
+    <div className="sort-controls">
+  <label htmlFor="sort-select">
+    並び順
+  </label>
+
+  <select
+    id="sort-select"
+    value={sortOption}
+    onChange={(event) =>
+      setSortOption(
+        event.target.value as SortOption
+      )
+    }
+  >
+    <option value="LEVEL_ASC">
+      レベル昇順
+    </option>
+
+    <option value="LEVEL_DESC">
+      レベル降順
+    </option>
+
+    <option value="TITLE_ASC">
+      曲名順
+    </option>
+
+    <option value="TITLE_DESC">
+      曲名逆順
+    </option>
+
+    <option value="BEST_BAD_ASC">
+      最小BADが少ない順
+    </option>
+
+    <option value="CLEAR_RATE_DESC">
+      CLEAR率が高い順
+    </option>
+  </select>
+</div>
+
+  </div>
+
+            {displayedSongs.map((song) => {
+              const record =
+                mode === "RANDOM"
+                  ? records[song.id].random
+                  : records[song.id].sRandom
+
+              return (
+                <SongRow
+                  key={`${mode}-${song.id}`}
+                  song={song}
+                  record={record}
+                  onRecordChange={(newRecord) => {
+                    setRecords((prev) => ({
+                      ...prev,
+                      [song.id]: {
+                        ...prev[song.id],
+                        [mode === "RANDOM"
+                          ? "random"
+                          : "sRandom"]: newRecord,
+                      },
+                    }))
+                  }}
+                />
+              )
+            })}
+          </>
+        )}
+      </div>
+
+// データのimport/exportのUIを表示する
+{showDataMigration && (
+  <div
+    className="data-migration-overlay"
+    onClick={() => setShowDataMigration(false)}
+  >
+    <div
+      className="data-migration-modal"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="data-migration-header">
+        <h2>データを移行する</h2>
+
+        <button
+          onClick={() => setShowDataMigration(false)}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="data-migration-content">
+
+        <p>
+          プレイ履歴などのデータを
+          バックアップ・復元できます。
+        </p>
+
+        <button
+          onClick={handleExport}
+          className="migration-action-button"
+        >
+          データを書き出す
+        </button>
+
+        <label className="migration-action-button">
+          データを読み込む
+
+          <input
+            type="file"
+            accept=".json,application/json"
+            onChange={handleImport}
+            hidden
+          />
+        </label>
+
+      </div>
+    </div>
+  </div>
+)}
+    </div>
   )
 }
 
