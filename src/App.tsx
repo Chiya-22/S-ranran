@@ -392,7 +392,7 @@ const displayedSongs = songs
           <div>
             <h2>S-RANDOM レベル一覧</h2>
 
-            <div>
+            <div> {/* レベルの範囲を選択するUI folder filter */}
               <label>
                 表示レベル：
                 <select
@@ -443,7 +443,7 @@ const displayedSongs = songs
               </label>
             </div>
 
-            <div>
+            <div> {/* レベルの並び順を選択するUI folder sort */}
               <label>
                 並び順：
                 <select
@@ -467,21 +467,41 @@ const displayedSongs = songs
               </label>
             </div>
 
-            <div className="folder-list">
-              {filteredSRandomLevels.map(
-                (level) => (
-                  <button
-                    className="folder-button"
-                    key={level}
-                    onClick={() =>
-                      setSelectedLevel(level)
-                    }
-                  >
-                    📁 {level}
-                  </button>
+            {/* レベルの一覧を表示するUI folder list */}
+          <div className="folder-list">
+            {filteredSRandomLevels.map((level) => {
+              const levelSongs = songs.filter((song) => {
+                return song.sRandomLevel === level
+              })
+
+              const clearCount = levelSongs.filter((song) => {
+                const record = records[song.id].sRandom
+
+                return record.history.some(
+                  (play) => play.result === "CLEAR"
                 )
-              )}
-            </div>
+              }).length
+
+              return (
+                <button
+                  className="folder-button"
+                  key={level}
+                  onClick={() =>
+                    setSelectedLevel(level)
+                  }
+                >
+                  <div className="folder-level">
+                    📁 {level}
+                  </div>
+
+                  <div className="folder-progress">
+                    {clearCount} / {levelSongs.length}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
           </div>
         ) : (
           <>
@@ -603,6 +623,8 @@ const displayedSongs = songs
           </>
         )}
       </div>
+
+// データのimport/exportのUIを表示する
 {showDataMigration && (
   <div
     className="data-migration-overlay"

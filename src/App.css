@@ -331,11 +331,25 @@
 }
 
 .folder-button {
-  display: block;
+  display: flex;
+  flex-direction: row;
   width: 100%;
   text-align: left;
   padding: 16px;
   font-size: 16px;
+
+  align-items: center;
+  justify-content: space-between;
+}
+
+.folder-level {
+  font-size: 16px;
+}
+
+.folder-progress {
+  margin-left: auto;
+  font-size: 13px;
+  opacity: 0.7;
 }
 
 .level-select {
