@@ -2,6 +2,7 @@ import SongRow from "./SongRow"
 import "./App.css"
 import { useEffect, useState } from "react"
 import { initialSongs } from "./songs"
+import {recommendSongs} from "./recommendation"
 
 const STORAGE_KEY = "songRecords-v2"
 
@@ -90,6 +91,12 @@ const [sortOption, setSortOption] =
 
     return createInitialRecords()
   })
+
+  const [randomSongId, setRandomSongId] =
+  useState<string | null>(null)
+
+  const [recommendedSongs, setRecommendedSongs] =
+  useState<typeof initialSongs>([])
 
   useEffect(() => {
     localStorage.setItem(
@@ -300,6 +307,41 @@ const displayedSongs = songs
   }
 })
 
+const randomSong =
+  randomSongId !== null
+    ? displayedSongs.find(
+        (song) => song.id === randomSongId
+      ) ?? null
+    : null
+
+    const handleRandomSong = () => {
+  if (displayedSongs.length === 0) {
+    alert("条件に合う曲がありません")
+    return
+  }
+
+  const randomIndex = Math.floor(
+    Math.random() * displayedSongs.length
+  )
+
+  const selectedSong =
+    displayedSongs[randomIndex]
+
+    setRandomSongId(selectedSong.id)
+  }
+
+    const handleRecommend = () => {
+      const recommendations =
+        recommendSongs(
+          displayedSongs,
+          records,
+          mode,
+          5
+        )
+
+      setRecommendedSongs(recommendations)
+}
+
   const sRandomLevels = Array.from(
     new Set(
       songs
@@ -506,6 +548,7 @@ const displayedSongs = songs
         ) : (
           <>
             {page === "S-RANDOM" && (
+              <>
               <button
                 onClick={() =>
                   setSelectedLevel(null)
@@ -513,9 +556,99 @@ const displayedSongs = songs
               >
                 ← レベル一覧に戻る
               </button>
+
+              <button
+                className="random-song-button"
+                onClick={handleRandomSong}
+              >
+                🎲 ランダム選曲
+              </button>
+              </>
             )}
 
-            <div className="song-list-controls">
+            {randomSongId !== null && (
+              <div className="random-song-result">
+                <div className="random-song-label">
+                  ランダム選曲
+                </div>
+
+                {(() => {
+                  const song = displayedSongs.find(
+                    (song) => song.id === randomSongId
+                  )
+
+                  if (!song) {
+                    return null
+                  }
+
+                  return (
+                    <div className="random-song-card">
+                      <div className="random-song-title">
+                        {song.title}
+                      </div>
+
+                      <div className="random-song-level">
+                        Lv {song.level}
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+
+            {randomSong ? (
+  <>
+    <div className="random-song-controls">
+      <button
+        
+        onClick={() => setRandomSongId(null)}
+      >
+        ← 一覧に戻る
+      </button>
+
+      <button
+        className="random-song-button"
+        onClick={handleRandomSong}
+      >
+        🎲 もう一度
+      </button>
+    </div>
+
+    {/* ランダム選曲中はフィルタ・並び順を表示しない */}
+    <div className="random-song-label">
+      ランダム選曲
+    </div>
+
+    {(() => {
+      const record =
+        mode === "RANDOM"
+          ? records[randomSong.id].random
+          : records[randomSong.id].sRandom
+
+      return (
+        <SongRow
+          key={`${mode}-${randomSong.id}`}
+          song={randomSong}
+          record={record}
+          onRecordChange={(newRecord) => {
+            setRecords((prev) => ({
+              ...prev,
+              [randomSong.id]: {
+                ...prev[randomSong.id],
+                [mode === "RANDOM"
+                  ? "random"
+                  : "sRandom"]: newRecord,
+              },
+            }))
+          }}
+        />
+      )
+    })()}
+  </>
+) : (
+  <>
+  {/* 通常時だけフィルタ・並び順 */}
+  <div className="song-list-controls">
 
   <div className="filter-control">
     <label htmlFor="filter-select">
@@ -530,7 +663,7 @@ const displayedSongs = songs
           event.target.value as FilterOption
         )
       }
-    >
+    >Ï
         <option value="ALL">
           すべて
         </option>
@@ -595,36 +728,39 @@ const displayedSongs = songs
 
   </div>
 
-            {displayedSongs.map((song) => {
-              const record =
-                mode === "RANDOM"
-                  ? records[song.id].random
-                  : records[song.id].sRandom
 
-              return (
-                <SongRow
-                  key={`${mode}-${song.id}`}
-                  song={song}
-                  record={record}
-                  onRecordChange={(newRecord) => {
-                    setRecords((prev) => ({
-                      ...prev,
-                      [song.id]: {
-                        ...prev[song.id],
-                        [mode === "RANDOM"
-                          ? "random"
-                          : "sRandom"]: newRecord,
-                      },
-                    }))
-                  }}
-                />
-              )
-            })}
+  {displayedSongs.map((song) => {
+    const record =
+      mode === "RANDOM"
+        ? records[song.id].random
+        : records[song.id].sRandom
+
+    return (
+      <SongRow
+        key={`${mode}-${song.id}`}
+        song={song}
+        record={record}
+        onRecordChange={(newRecord) => {
+          setRecords((prev) => ({
+            ...prev,
+            [song.id]: {
+              ...prev[song.id],
+              [mode === "RANDOM"
+                ? "random"
+                : "sRandom"]: newRecord,
+            },
+          }))
+        }}
+      />
+    )
+  })}
+  </>
+)}
           </>
         )}
       </div>
 
-// データのimport/exportのUIを表示する
+{/* データのimport/exportのUIを表示する*/ }
 {showDataMigration && (
   <div
     className="data-migration-overlay"

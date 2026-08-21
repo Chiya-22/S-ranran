@@ -360,21 +360,70 @@
 
 .song-list-controls {
   display: flex;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  flex-wrap: nowrap;
 }
 
-.sort-control,
-.filter-control {
+.filter-control,
+.sort-controls {
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .song-list-controls select {
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 6px;
   font-size: 14px;
+}
+
+.random-song-result {
+  margin: 16px 0;
+}
+
+.random-song-label {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.random-song-card {
+  padding: 14px 16px;
+  border: 1px solid #666;
+  border-radius: 8px;
+}
+
+.random-song-title {
+  font-size: 17px;
+  font-weight: bold;
+}
+
+.random-song-level {
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.random-song-controls {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0;
+  min-height: 40px;
+}
+
+.random-song-button {
+  position: absolute;
+  right: 0;
+  padding: 8px 14px;
+}
+
+.random-song-label {
+  margin: 10px 0;
+  font-size: 14px;
+  opacity: 0.7;
 }
 
 @media (max-width: 600px) {
