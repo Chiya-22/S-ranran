@@ -390,6 +390,7 @@ const randomSong =
         <button
           onClick={() => {
             setPage("RANDOM")
+            setMode("RANDOM")
             setSelectedLevel(null)
           }}
         >
@@ -399,6 +400,7 @@ const randomSong =
         <button
           onClick={() => {
             setPage("S-RANDOM")
+            setMode("S-RANDOM")
             setSelectedLevel(null)
           }}
         >
@@ -419,15 +421,19 @@ const randomSong =
       <div>
         <h1>S-ranran</h1>
 
-        <button onClick={() => setMode("RANDOM")}>
-          RANDOM
-        </button>
+        {page === "ALL" && (
+  <>
+    <p>現在のモード：{mode}</p>
 
-        <button onClick={() => setMode("S-RANDOM")}>
-          S-RANDOM
-        </button>
+    <button onClick={() => setMode("RANDOM")}>
+      RANDOM
+    </button>
 
-        <p>現在のモード：{mode}</p>
+    <button onClick={() => setMode("S-RANDOM")}>
+      S-RANDOM
+    </button>
+  </>
+)}
 
         {page === "S-RANDOM" &&
         selectedLevel === null ? (
@@ -550,9 +556,10 @@ const randomSong =
             {page === "S-RANDOM" && (
               <>
               <button
-                onClick={() =>
+                onClick={() =>{
                   setSelectedLevel(null)
-                }
+                  setRandomSongId(null)
+                }}
               >
                 ← レベル一覧に戻る
               </button>
@@ -614,10 +621,6 @@ const randomSong =
       </button>
     </div>
 
-    {/* ランダム選曲中はフィルタ・並び順を表示しない */}
-    <div className="random-song-label">
-      ランダム選曲
-    </div>
 
     {(() => {
       const record =
