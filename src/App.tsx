@@ -2,7 +2,6 @@ import SongRow from "./SongRow"
 import "./App.css"
 import { useEffect, useState } from "react"
 import { initialSongs } from "./songs"
-import {recommendSongs} from "./recommendation"
 
 const STORAGE_KEY = "songRecords-v2"
 
@@ -94,9 +93,6 @@ const [sortOption, setSortOption] =
 
   const [randomSongId, setRandomSongId] =
   useState<string | null>(null)
-
-  const [recommendedSongs, setRecommendedSongs] =
-  useState<typeof initialSongs>([])
 
   useEffect(() => {
     localStorage.setItem(
@@ -329,18 +325,6 @@ const randomSong =
 
     setRandomSongId(selectedSong.id)
   }
-
-    const handleRecommend = () => {
-      const recommendations =
-        recommendSongs(
-          displayedSongs,
-          records,
-          mode,
-          5
-        )
-
-      setRecommendedSongs(recommendations)
-}
 
   const sRandomLevels = Array.from(
     new Set(
