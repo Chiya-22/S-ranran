@@ -1,8 +1,7 @@
 import SongRow from "./SongRow"
 import "./App.css"
 import { useEffect, useState } from "react"
-import { initialSongs } from "./songs"
-import { recommendSongs } from "./recommendation"
+import { initialSongs, type Song } from "./songs"
 import TodayPage from "./TodayPage"
 import DataMigrationModal from "./DataMigrationModal"
 import type { FilterOption, SortOption } from "./SongListControls"
@@ -58,19 +57,10 @@ function App() {
   const [showDataMigration, setShowDataMigration] =
     useState(false)
 
+  const [showSettings, setShowSettings] = useState(false)
+
   const [todayDeck, setTodayDeck] =
     useState<string[]>([])
-
-  const createTodayDeck = () => {
-    const shuffled = [...songs]
-      .sort(() => Math.random() - 0.5)
-
-    const selected = shuffled.slice(0, 5)
-
-    setTodayDeck(
-      selected.map((song) => song.id)
-    )
-  }
 
   const [filterOption, setFilterOption] =
     useState<FilterOption>("ALL")
@@ -95,11 +85,14 @@ function App() {
     return createInitialRecords()
   })
 
+  const [undoStack, setUndoStack] =
+    useState<SongRecords[]>([])
+
+  const [redoStack, setRedoStack] =
+    useState<SongRecords[]>([])
+
   const [randomSongId, setRandomSongId] =
     useState<string | null>(null)
-
-  const [recommendedSongs, setRecommendedSongs] =
-    useState<typeof initialSongs>([])
 
   useEffect(() => {
     localStorage.setItem(
@@ -182,6 +175,62 @@ function App() {
 
     // 同じファイルを再度選択できるようにする
     event.target.value = ""
+  }
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      "直前のプレイ記録を元に戻しますか？"
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    const previousRecords =
+      undoStack[undoStack.length - 1]
+
+    setUndoStack((prev) =>
+      prev.slice(0, -1)
+    )
+
+    setRedoStack((prev) => [
+      ...prev,
+      records,
+    ])
+
+    setRecords(previousRecords)
+  }
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      "取り消した操作をやり直しますか？"
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    const nextRecords =
+      redoStack[redoStack.length - 1]
+
+    setRedoStack((prev) =>
+      prev.slice(0, -1)
+    )
+
+    setUndoStack((prev) => [
+      ...prev,
+      records,
+    ])
+
+    setRecords(nextRecords)
   }
 
   const displayedSongs = songs
@@ -333,18 +382,6 @@ function App() {
     setRandomSongId(selectedSong.id)
   }
 
-  const handleRecommend = () => {
-    const recommendations =
-      recommendSongs(
-        displayedSongs,
-        records,
-        mode,
-        5
-      )
-
-    setRecommendedSongs(recommendations)
-  }
-
   const sRandomLevels = Array.from(
     new Set(
       songs
@@ -377,6 +414,65 @@ function App() {
         ? aNumber - bNumber
         : bNumber - aNumber
     })
+
+  const createTodayDeck = (
+    mode: "RANDOM" | "S-RANDOM",
+    minLevel: number,
+    maxLevel: number,
+    count: number,
+    unplayedFirst: boolean
+  ): Song[] => {
+    const candidates = songs.filter((song) => {
+      const level =
+        mode === "RANDOM"
+          ? song.randomLevel
+          : song.sRandomLevel
+
+      if (level === null) {
+        return false
+      }
+
+      const levelNumber = Number(
+        level.replace(/[^0-9]/g, "")
+      )
+
+      return (
+        levelNumber >= minLevel &&
+        levelNumber <= maxLevel
+      )
+    })
+
+    const shuffled = [...candidates].sort(
+      () => Math.random() - 0.5
+    )
+
+    if (!unplayedFirst) {
+      return shuffled.slice(0, count)
+    }
+
+    const unplayed = shuffled.filter((song) => {
+      const record =
+        mode === "RANDOM"
+          ? records[song.id].random
+          : records[song.id].sRandom
+
+      return record.history.length === 0
+    })
+
+    const played = shuffled.filter((song) => {
+      const record =
+        mode === "RANDOM"
+          ? records[song.id].random
+          : records[song.id].sRandom
+
+      return record.history.length > 0
+    })
+
+    return [
+      ...unplayed,
+      ...played,
+    ].slice(0, count)
+  }
 
   return (
     <div>
@@ -451,7 +547,6 @@ function App() {
         {page === "TODAY" ? (
           <TodayPage
             songs={songs}
-            todayDeck={todayDeck}
             onCreateDeck={createTodayDeck}
           />
         ) : (
@@ -654,15 +749,24 @@ function App() {
                         song={randomSong}
                         record={record}
                         onRecordChange={(newRecord) => {
-                          setRecords((prev) => ({
-                            ...prev,
-                            [randomSong.id]: {
-                              ...prev[randomSong.id],
-                              [mode === "RANDOM"
-                                ? "random"
-                                : "sRandom"]: newRecord,
-                            },
-                          }))
+                          setRecords((prev) => {
+                            setUndoStack((undoPrev) => [
+                              ...undoPrev,
+                              prev,
+                            ])
+
+                            setRedoStack([])
+
+                            return {
+                              ...prev,
+                              [randomSong.id]: {
+                                ...prev[randomSong.id],
+                                [mode === "RANDOM"
+                                  ? "random"
+                                  : "sRandom"]: newRecord,
+                              },
+                            }
+                          })
                         }}
                       />
                     )
@@ -678,6 +782,24 @@ function App() {
                     setSortOption={setSortOption}
                   />
 
+                  <div className="history-actions">
+  <button
+    className="history-action-button"
+    onClick={handleUndo}
+    disabled={undoStack.length === 0}
+  >
+    ↶ 元に戻す
+  </button>
+
+  <button
+    className="history-action-button"
+    onClick={handleRedo}
+    disabled={redoStack.length === 0}
+  >
+    ↷ やり直す
+  </button>
+</div>
+
 
                   {displayedSongs.map((song) => {
                     const record =
@@ -691,16 +813,26 @@ function App() {
                         song={song}
                         record={record}
                         onRecordChange={(newRecord) => {
-                          setRecords((prev) => ({
-                            ...prev,
-                            [song.id]: {
-                              ...prev[song.id],
-                              [mode === "RANDOM"
-                                ? "random"
-                                : "sRandom"]: newRecord,
-                            },
-                          }))
-                        }}
+  // 現在の状態をUNDO用に保存
+  setUndoStack((prev) => [
+    ...prev,
+    records,
+  ])
+
+  // 新しい操作をしたのでREDOは消す
+  setRedoStack([])
+
+  // recordsを更新
+  setRecords({
+    ...records,
+    [song.id]: {
+      ...records[song.id],
+      [mode === "RANDOM"
+        ? "random"
+        : "sRandom"]: newRecord,
+    },
+  })
+}}
                       />
                     )
                   })}
