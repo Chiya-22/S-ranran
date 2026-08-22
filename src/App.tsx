@@ -59,9 +59,6 @@ function App() {
 
   const [showSettings, setShowSettings] = useState(false)
 
-  const [todayDeck, setTodayDeck] =
-    useState<string[]>([])
-
   const [filterOption, setFilterOption] =
     useState<FilterOption>("ALL")
 
@@ -518,17 +515,18 @@ function App() {
 
       </div>
 
-      <div className="data-migration-container">
-        <button
-          className="data-migration-button"
-          onClick={() => setShowDataMigration(true)}
-        >
-          データを移行する
-        </button>
-      </div>
-
       <div>
-        <h1>S-ranran</h1>
+        <div className="app-title-area">
+          <h1>S-ranran</h1>
+
+          <button
+            className="settings-button"
+            onClick={() => setShowSettings(true)}
+            aria-label="設定"
+          >
+            ⚙
+          </button>
+        </div>
 
         {page === "ALL" && (
           <>
@@ -783,22 +781,22 @@ function App() {
                   />
 
                   <div className="history-actions">
-  <button
-    className="history-action-button"
-    onClick={handleUndo}
-    disabled={undoStack.length === 0}
-  >
-    ↶ 元に戻す
-  </button>
+                    <button
+                      className="history-action-button"
+                      onClick={handleUndo}
+                      disabled={undoStack.length === 0}
+                    >
+                      ↶ 元に戻す
+                    </button>
 
-  <button
-    className="history-action-button"
-    onClick={handleRedo}
-    disabled={redoStack.length === 0}
-  >
-    ↷ やり直す
-  </button>
-</div>
+                    <button
+                      className="history-action-button"
+                      onClick={handleRedo}
+                      disabled={redoStack.length === 0}
+                    >
+                      ↷ やり直す
+                    </button>
+                  </div>
 
 
                   {displayedSongs.map((song) => {
@@ -813,26 +811,26 @@ function App() {
                         song={song}
                         record={record}
                         onRecordChange={(newRecord) => {
-  // 現在の状態をUNDO用に保存
-  setUndoStack((prev) => [
-    ...prev,
-    records,
-  ])
+                          // 現在の状態をUNDO用に保存
+                          setUndoStack((prev) => [
+                            ...prev,
+                            records,
+                          ])
 
-  // 新しい操作をしたのでREDOは消す
-  setRedoStack([])
+                          // 新しい操作をしたのでREDOは消す
+                          setRedoStack([])
 
-  // recordsを更新
-  setRecords({
-    ...records,
-    [song.id]: {
-      ...records[song.id],
-      [mode === "RANDOM"
-        ? "random"
-        : "sRandom"]: newRecord,
-    },
-  })
-}}
+                          // recordsを更新
+                          setRecords({
+                            ...records,
+                            [song.id]: {
+                              ...records[song.id],
+                              [mode === "RANDOM"
+                                ? "random"
+                                : "sRandom"]: newRecord,
+                            },
+                          })
+                        }}
                       />
                     )
                   })}
@@ -844,6 +842,40 @@ function App() {
 
 
       </div>
+
+      {showSettings && (
+        <div
+          className="settings-overlay"
+          onClick={() => setShowSettings(false)}
+        >
+          <div
+            className="settings-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="settings-header">
+              <h2>設定</h2>
+
+              <button
+                onClick={() => setShowSettings(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="settings-content">
+              <button
+                className="settings-item"
+                onClick={() => {
+                  setShowSettings(false)
+                  setShowDataMigration(true)
+                }}
+              >
+                データを移行する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* データのimport/exportのUIを表示する*/}
       <DataMigrationModal
