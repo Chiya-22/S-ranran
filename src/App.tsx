@@ -14,7 +14,7 @@ import type {
   PlayRecord,
   SongRecords,
 } from "./types"
-import type { RecommendedSong } from "./todayDeck"
+import { getDeckLevel, type RecommendedSong } from "./todayDeck"
 
 const createEmptyRecord = (): PlayRecord => ({
   history: [],
@@ -264,6 +264,47 @@ function App() {
     "S-RANDOM",
     0.5
   )
+
+  const randomDeckLevel = getDeckLevel(
+    songs,
+    records,
+    randomSkillResult,
+    "RANDOM"
+  )
+
+  const sRandomDeckLevel = getDeckLevel(
+    songs,
+    records,
+    sRandomSkillResult,
+    "S-RANDOM"
+  )
+
+
+  const randomRange =
+    randomSkillResult.skillLevel !== null
+      ? randomSkillResult.range
+      : {
+        stableMax: Math.max(
+          1,
+          randomDeckLevel.level - 1
+        ),
+        suitable: randomDeckLevel.level,
+        challengeMin:
+          randomDeckLevel.level + 1,
+      }
+
+  const sRandomRange =
+    sRandomSkillResult.skillLevel !== null
+      ? sRandomSkillResult.range
+      : {
+        stableMax: Math.max(
+          1,
+          sRandomDeckLevel.level - 1
+        ),
+        suitable: sRandomDeckLevel.level,
+        challengeMin:
+          sRandomDeckLevel.level + 1,
+      }
 
   const displayedSongs = songs
     .filter((song) => {
@@ -901,26 +942,24 @@ function App() {
                       <div>
                         <strong>RANDOM</strong>
 
-                        <div>
-                          安定：
-                          {randomSkillResult.range.stableMax !== null
-                            ? `Lv${randomSkillResult.range.stableMax}以下`
-                            : "-"}
-                        </div>
+                        <p>
+                          安定：Lv{randomRange.stableMax}
+                        </p>
 
-                        <div>
-                          適正：
-                          {randomSkillResult.range.suitable !== null
-                            ? `Lv${randomSkillResult.range.suitable}`
-                            : "-"}
-                        </div>
+                        <p>
+                          適正：Lv{randomRange.suitable}
+                        </p>
 
-                        <div>
-                          挑戦：
-                          {randomSkillResult.range.challengeMin !== null
-                            ? `Lv${randomSkillResult.range.challengeMin}以上`
-                            : "-"}
-                        </div>
+                        <p>
+                          挑戦：Lv{randomRange.challengeMin}
+                        </p>
+
+                        {randomSkillResult.skillLevel === null &&
+                          randomDeckLevel.source === "BEST_CLEAR" && (
+                            <p className="provisional-label">
+                              ※最高CLEARを基準にした暫定値です
+                            </p>
+                          )}
 
                         <details className="level-info-section">
                           <summary>RANDOM</summary>
@@ -953,27 +992,24 @@ function App() {
                       <div>
                         <strong>S-RANDOM</strong>
 
-                        <div>
-                          安定：
-                          {sRandomSkillResult.range.stableMax !== null
-                            ? `Lv${sRandomSkillResult.range.stableMax}以下`
-                            : "-"}
-                        </div>
+                        <p>
+                          安定：Lv{sRandomRange.stableMax}
+                        </p>
 
-                        <div>
-                          適正：
-                          {sRandomSkillResult.range.suitable !== null
-                            ? `Lv${sRandomSkillResult.range.suitable}`
-                            : "-"}
-                        </div>
+                        <p>
+                          適正：Lv{sRandomRange.suitable}
+                        </p>
 
-                        <div>
-                          挑戦：
-                          {sRandomSkillResult.range.challengeMin !== null
-                            ? `Lv${sRandomSkillResult.range.challengeMin}以上`
-                            : "-"}
-                        </div>
+                        <p>
+                          挑戦：Lv{sRandomRange.challengeMin}
+                        </p>
 
+                        {sRandomSkillResult.skillLevel === null &&
+                          sRandomDeckLevel.source === "BEST_CLEAR" && (
+                            <p className="provisional-label">
+                              ※最高CLEARを基準にした暫定値です
+                            </p>
+                          )}
                       </div>
 
                       {/* S-RANDOMの詳細を折りたたみで表示する */}
