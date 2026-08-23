@@ -553,6 +553,23 @@
   cursor: default;
 }
 
+.level-info-section {
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0;
+}
+
+.level-info-section summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  font-weight: bold;
+}
+
+.level-info-detail {
+  padding: 10px 14px 14px;
+}
+
 @media (max-width: 600px) {
   .song-list-controls {
     gap: 8px;
