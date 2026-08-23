@@ -1,30 +1,20 @@
 import SongRow from "./SongRow"
 import "./App.css"
 import { useEffect, useState } from "react"
-import { initialSongs, type Song } from "./songs"
+import { initialSongs, } from "./songs"
 import TodayPage from "./TodayPage"
 import DataMigrationModal from "./DataMigrationModal"
 import type { FilterOption, SortOption } from "./SongListControls"
 import SongListControls from "./SongListControls"
+import { calculateSkillLevel } from "./skillLevel"
 
 const STORAGE_KEY = "songRecords-v2"
 
-type PlayResult = {
-  result: "CLEAR" | "FAILED"
-  bad: number
-  playedAt: string
-}
-
-type PlayRecord = {
-  history: PlayResult[]
-}
-
-type SongRecords = {
-  [songId: string]: {
-    random: PlayRecord
-    sRandom: PlayRecord
-  }
-}
+import type {
+  PlayRecord,
+  SongRecords,
+} from "./types"
+import type { RecommendedSong } from "./todayDeck"
 
 const createEmptyRecord = (): PlayRecord => ({
   history: [],
@@ -59,6 +49,9 @@ function App() {
 
   const [showSettings, setShowSettings] = useState(false)
 
+  const [settingsPage, setSettingsPage] =
+    useState<"MENU" | "LEVEL_INFO">("MENU")
+
   const [filterOption, setFilterOption] =
     useState<FilterOption>("ALL")
 
@@ -91,12 +84,40 @@ function App() {
   const [randomSongId, setRandomSongId] =
     useState<string | null>(null)
 
+  const [recommendedSongs, setRecommendedSongs] =
+    useState<RecommendedSong[]>([])
+
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify(records)
     )
   }, [records])
+
+  const handleRecordChange = (
+    songId: string,
+    mode: "RANDOM" | "S-RANDOM",
+    newRecord: PlayRecord
+  ) => {
+    const newRecords = {
+      ...records,
+      [songId]: {
+        ...records[songId],
+        [mode === "RANDOM"
+          ? "random"
+          : "sRandom"]: newRecord,
+      },
+    }
+
+    setUndoStack((prev) => [
+      ...prev,
+      records,
+    ])
+
+    setRedoStack([])
+
+    setRecords(newRecords)
+  }
 
   const handleExport = () => {
     const exportData = {
@@ -229,6 +250,20 @@ function App() {
 
     setRecords(nextRecords)
   }
+
+  const randomSkillResult = calculateSkillLevel(
+    songs,
+    records,
+    "RANDOM",
+    0.5
+  )
+
+  const sRandomSkillResult = calculateSkillLevel(
+    songs,
+    records,
+    "S-RANDOM",
+    0.5
+  )
 
   const displayedSongs = songs
     .filter((song) => {
@@ -412,65 +447,6 @@ function App() {
         : bNumber - aNumber
     })
 
-  const createTodayDeck = (
-    mode: "RANDOM" | "S-RANDOM",
-    minLevel: number,
-    maxLevel: number,
-    count: number,
-    unplayedFirst: boolean
-  ): Song[] => {
-    const candidates = songs.filter((song) => {
-      const level =
-        mode === "RANDOM"
-          ? song.randomLevel
-          : song.sRandomLevel
-
-      if (level === null) {
-        return false
-      }
-
-      const levelNumber = Number(
-        level.replace(/[^0-9]/g, "")
-      )
-
-      return (
-        levelNumber >= minLevel &&
-        levelNumber <= maxLevel
-      )
-    })
-
-    const shuffled = [...candidates].sort(
-      () => Math.random() - 0.5
-    )
-
-    if (!unplayedFirst) {
-      return shuffled.slice(0, count)
-    }
-
-    const unplayed = shuffled.filter((song) => {
-      const record =
-        mode === "RANDOM"
-          ? records[song.id].random
-          : records[song.id].sRandom
-
-      return record.history.length === 0
-    })
-
-    const played = shuffled.filter((song) => {
-      const record =
-        mode === "RANDOM"
-          ? records[song.id].random
-          : records[song.id].sRandom
-
-      return record.history.length > 0
-    })
-
-    return [
-      ...unplayed,
-      ...played,
-    ].slice(0, count)
-  }
-
   return (
     <div>
       <div className="page-tabs">
@@ -545,7 +521,16 @@ function App() {
         {page === "TODAY" ? (
           <TodayPage
             songs={songs}
-            onCreateDeck={createTodayDeck}
+            records={records}
+            randomSkillResult={randomSkillResult}
+            sRandomSkillResult={sRandomSkillResult}
+            onRecordChange={handleRecordChange}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={undoStack.length > 0}
+            canRedo={redoStack.length > 0}
+            recommendedSongs={recommendedSongs}
+            onSetRecommendedSongs={setRecommendedSongs}
           />
         ) : (
           page === "S-RANDOM" &&
@@ -843,10 +828,14 @@ function App() {
 
       </div>
 
+      {/* 設定画面のUIを表示する */}
       {showSettings && (
         <div
           className="settings-overlay"
-          onClick={() => setShowSettings(false)}
+          onClick={() => {
+            setSettingsPage("MENU")
+            setShowSettings(false)
+          }}
         >
           <div
             className="settings-modal"
@@ -856,22 +845,174 @@ function App() {
               <h2>設定</h2>
 
               <button
-                onClick={() => setShowSettings(false)}
+                onClick={() => {
+                  setSettingsPage("MENU")
+                  setShowSettings(false)
+                }}
               >
                 ×
               </button>
             </div>
 
             <div className="settings-content">
-              <button
-                className="settings-item"
-                onClick={() => {
-                  setShowSettings(false)
-                  setShowDataMigration(true)
-                }}
-              >
-                データを移行する
-              </button>
+
+              {settingsPage === "MENU" && (
+                <>
+                  <button
+                    className="settings-item"
+                    onClick={() =>
+                      setSettingsPage("LEVEL_INFO")
+                    }
+                  >
+                    適正レベル関連
+                  </button>
+
+                  <button
+                    className="settings-item"
+                    onClick={() => {
+                      setShowSettings(false)
+                      setShowDataMigration(true)
+                    }}
+                  >
+                    データを移行する
+                  </button>
+                </>
+              )}
+
+              {settingsPage === "LEVEL_INFO" && (
+                <>
+                  <button
+                    className="settings-back-button"
+                    onClick={() =>
+                      setSettingsPage("MENU")
+                    }
+                  >
+                    ← 設定に戻る
+                  </button>
+
+                  <h3>適正レベル関連</h3>
+
+                  {/* ここに適正レベル情報 */}
+                  <div className="level-info">
+
+
+                    <div className="skill-level-debug">
+                      {/* RANDOMの詳細を折りたたみで表示する */}
+                      <div>
+                        <strong>RANDOM</strong>
+
+                        <div>
+                          安定：
+                          {randomSkillResult.range.stableMax !== null
+                            ? `Lv${randomSkillResult.range.stableMax}以下`
+                            : "-"}
+                        </div>
+
+                        <div>
+                          適正：
+                          {randomSkillResult.range.suitable !== null
+                            ? `Lv${randomSkillResult.range.suitable}`
+                            : "-"}
+                        </div>
+
+                        <div>
+                          挑戦：
+                          {randomSkillResult.range.challengeMin !== null
+                            ? `Lv${randomSkillResult.range.challengeMin}以上`
+                            : "-"}
+                        </div>
+
+                        <details className="level-info-section">
+                          <summary>RANDOM</summary>
+                          {/* ここにRANDOMの詳細を折りたたみで表示する*/}
+                          <div className="level-info-detail">
+                            <div className="skill-stats-debug">
+                              {randomSkillResult.stats.map((stat) => (
+                                <div key={stat.level}>
+                                  Lv{stat.level}：
+                                  実CLEAR {stat.clears} / {stat.total}
+                                  {" / "}
+                                  推定 +{stat.estimatedClears.toFixed(1)}
+                                  {" / "}
+                                  判定 {stat.effectiveClears.toFixed(1)}
+                                  {" / "}
+                                  {stat.clearRate !== null
+                                    ? `${Math.round(stat.clearRate * 100)}%`
+                                    : "-"}
+                                  {" / "}
+                                  信頼度 {stat.confidence}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </details>
+
+
+                      </div>
+                      {/* S-RANDOMの詳細を折りたたみで表示する */}
+                      <div>
+                        <strong>S-RANDOM</strong>
+
+                        <div>
+                          安定：
+                          {sRandomSkillResult.range.stableMax !== null
+                            ? `Lv${sRandomSkillResult.range.stableMax}以下`
+                            : "-"}
+                        </div>
+
+                        <div>
+                          適正：
+                          {sRandomSkillResult.range.suitable !== null
+                            ? `Lv${sRandomSkillResult.range.suitable}`
+                            : "-"}
+                        </div>
+
+                        <div>
+                          挑戦：
+                          {sRandomSkillResult.range.challengeMin !== null
+                            ? `Lv${sRandomSkillResult.range.challengeMin}以上`
+                            : "-"}
+                        </div>
+
+                      </div>
+
+                      {/* S-RANDOMの詳細を折りたたみで表示する */}
+                      <details className="level-info-section">
+                        <summary>S-RANDOM</summary>
+
+                        <div className="level-info-detail">
+
+                          <div>
+
+                            <div className="skill-stats-debug">
+                              {sRandomSkillResult.stats.map((stat) => (
+                                <div key={stat.level}>
+                                  Lv{stat.level}：
+                                  実CLEAR {stat.clears} / {stat.total}
+                                  {" / "}
+                                  推定 +{stat.estimatedClears.toFixed(1)}
+                                  {" / "}
+                                  判定 {stat.effectiveClears.toFixed(1)}
+                                  {" / "}
+                                  {stat.clearRate !== null
+                                    ? `${Math.round(stat.clearRate * 100)}%`
+                                    : "-"}
+                                  {" / "}
+                                  信頼度 {stat.confidence}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </details>
+
+
+
+                    </div>
+                  </div>
+                </>
+              )}
+
             </div>
           </div>
         </div>

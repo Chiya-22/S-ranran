@@ -1,197 +1,278 @@
 import { useState } from "react"
 import type { Song } from "./songs"
+import type { SkillLevelResult } from "./skillLevel"
+import {
+    createTodayDeck,
+    type DeckPurpose,
+    type RecommendedSong,
+} from "./todayDeck"
+import type {
+    PlayRecord,
+    SongRecords,
+} from "./types"
+import SongRow from "./SongRow"
 
 type TodayPageProps = {
-  songs: Song[]
-  onCreateDeck: (
-    mode: "RANDOM" | "S-RANDOM",
-    minLevel: number,
-    maxLevel: number,
-    count: number,
-    unplayedFirst: boolean
-  ) => Song[]
+    songs: Song[]
+    records: SongRecords
+    randomSkillResult: SkillLevelResult
+    sRandomSkillResult: SkillLevelResult
+
+    onRecordChange: (
+        songId: string,
+        mode: "RANDOM" | "S-RANDOM",
+        record: PlayRecord
+    ) => void
+
+    onUndo: () => void
+    onRedo: () => void
+    canUndo: boolean
+    canRedo: boolean
+
+    recommendedSongs: RecommendedSong[]
+    onSetRecommendedSongs: (
+        songs: RecommendedSong[]
+    ) => void
 }
 
 function TodayPage({
-  onCreateDeck,
+    songs,
+    records,
+    randomSkillResult,
+    sRandomSkillResult,
+    onRecordChange,
+    onUndo,
+    onRedo,
+    canUndo,
+    canRedo,
+    recommendedSongs,
+    onSetRecommendedSongs,
 }: TodayPageProps) {
-  const [mode, setMode] =
-    useState<"RANDOM" | "S-RANDOM">("S-RANDOM")
+    const [mode, setMode] =
+        useState<"RANDOM" | "S-RANDOM">("S-RANDOM")
 
-  const [minLevel, setMinLevel] = useState(15)
-  const [maxLevel, setMaxLevel] = useState(17)
+    const [purpose, setPurpose] =
+        useState<DeckPurpose>("TRAINING")
 
-  const [count, setCount] = useState(5)
+    const [count, setCount] = useState(5)
 
-  const [unplayedFirst, setUnplayedFirst] =
-    useState(true)
+    const [unplayedFirst, setUnplayedFirst] =
+        useState(true)
 
-  const [deck, setDeck] = useState<Song[]>([])
+    const [showReasons, setShowReasons] =
+        useState(false)
 
-  const handleCreateDeck = () => {
-    const newDeck = onCreateDeck(
-      mode,
-      minLevel,
-      maxLevel,
-      count,
-      unplayedFirst
-    )
+    const skillResult =
+        mode === "RANDOM"
+            ? randomSkillResult
+            : sRandomSkillResult
 
-    setDeck(newDeck)
-  }
-
-  return (
-    <div className="today-page">
-      <h2>今日やる曲</h2>
-
-      <div className="today-settings">
-
-        <div>
-          <label>
-            モード：
-          </label>
-
-          <select
-            value={mode}
-            onChange={(event) =>
-              setMode(
-                event.target.value as
-                  | "RANDOM"
-                  | "S-RANDOM"
-              )
+    const handleCreateDeck = () => {
+        const newDeck = createTodayDeck(
+            songs,
+            records,
+            skillResult,
+            mode,
+            {
+                purpose,
+                count,
+                unplayedFirst,
             }
-          >
-            <option value="S-RANDOM">
-              S-RANDOM
-            </option>
+        )
 
-            <option value="RANDOM">
-              RANDOM
-            </option>
-          </select>
-        </div>
+        onSetRecommendedSongs(newDeck)
+    }
 
-        <div>
-          <label>
-            レベル：
-          </label>
+    return (
+        <div className="today-page">
+            <h2>今日やる曲</h2>
 
-          <select
-            value={minLevel}
-            onChange={(event) =>
-              setMinLevel(
-                Number(event.target.value)
-              )
-            }
-          >
-            {Array.from(
-              { length: 19 },
-              (_, i) => i + 1
-            ).map((level) => (
-              <option
-                key={level}
-                value={level}
-              >
-                Lv{level}
-              </option>
-            ))}
-          </select>
+            <div className="today-settings">
 
-          {" ～ "}
+                <div>
+                    <label>
+                        モード：
+                    </label>
 
-          <select
-            value={maxLevel}
-            onChange={(event) =>
-              setMaxLevel(
-                Number(event.target.value)
-              )
-            }
-          >
-            {Array.from(
-              { length: 19 },
-              (_, i) => i + 1
-            ).map((level) => (
-              <option
-                key={level}
-                value={level}
-              >
-                Lv{level}
-              </option>
-            ))}
-          </select>
-        </div>
+                    <select
+                        value={mode}
+                        onChange={(event) =>
+                            setMode(
+                                event.target.value as
+                                | "RANDOM"
+                                | "S-RANDOM"
+                            )
+                        }
+                    >
+                        <option value="S-RANDOM">
+                            S-RANDOM
+                        </option>
 
-        <div>
-          <label>
-            曲数：
-          </label>
+                        <option value="RANDOM">
+                            RANDOM
+                        </option>
+                    </select>
+                </div>
 
-          <select
-            value={count}
-            onChange={(event) =>
-              setCount(
-                Number(event.target.value)
-              )
-            }
-          >
-            <option value={3}>3曲</option>
-            <option value={4}>4曲</option>
-            <option value={5}>5曲</option>
-          </select>
-        </div>
+                <div>
+                    <label>
+                        目的：
+                    </label>
 
-        <label>
-          <input
-            type="checkbox"
-            checked={unplayedFirst}
-            onChange={(event) =>
-              setUnplayedFirst(
-                event.target.checked
-              )
-            }
-          />
+                    <select
+                        value={purpose}
+                        onChange={(event) =>
+                            setPurpose(
+                                event.target.value as DeckPurpose
+                            )
+                        }
+                    >
+                        <option value="REHABILITATION">
+                            リハビリ
+                        </option>
 
-          未プレイを優先
-        </label>
+                        <option value="TRAINING">
+                            地力上げ
+                        </option>
 
-      </div>
+                        <option value="CHALLENGE">
+                            挑戦
+                        </option>
+                    </select>
+                </div>
 
-      <button
-        onClick={handleCreateDeck}
-      >
-        🎲 今日の曲を選ぶ
-      </button>
+                <div>
+                    <label>
+                        曲数：
+                    </label>
 
-      {deck.length > 0 && (
-        <div className="today-deck">
+                    <select
+                        value={count}
+                        onChange={(event) =>
+                            setCount(
+                                Number(event.target.value)
+                            )
+                        }
+                    >
+                        <option value={3}>
+                            3曲
+                        </option>
 
-          <h3>
-            今日のデッキ
-          </h3>
+                        <option value={4}>
+                            4曲
+                        </option>
 
-          {deck.map((song, index) => (
-            <div
-              className="today-song"
-              key={song.id}
-            >
-              <span>
-                {index + 1}.
-              </span>
+                        <option value={5}>
+                            5曲
+                        </option>
+                    </select>
+                </div>
+                <div>
+                    <label>
+                        <input
+                            type="checkbox"
+                            checked={unplayedFirst}
+                            onChange={(event) =>
+                                setUnplayedFirst(
+                                    event.target.checked
+                                )
+                            }
+                        />
 
-              <span>
-                {song.title}
-              </span>
+                        未プレイを優先
+                    </label>
 
-              <span>
-                Lv {song.level}
-              </span>
+                </div>
+
+                <div>
+
+                    <label>
+                        <input
+                            type="checkbox"
+                            checked={showReasons}
+                            onChange={(event) =>
+                                setShowReasons(
+                                    event.target.checked
+                                )
+                            }
+                        />
+
+                        選曲理由を表示
+                    </label>
+
+                </div>
+
             </div>
-          ))}
 
+            <button
+                onClick={handleCreateDeck}
+            >
+                🎲 今日の曲を選ぶ
+            </button>
+
+            {recommendedSongs.length > 0 && (
+                <div className="today-deck">
+
+                    <h3>
+                        今日のデッキ
+                    </h3>
+
+                    <div className="today-history-actions">
+                        <button
+                            className="history-action-button"
+                            onClick={onUndo}
+                            disabled={!canUndo}
+                        >
+                            ↶ 元に戻す
+                        </button>
+
+                        <button
+                            className="history-action-button"
+                            onClick={onRedo}
+                            disabled={!canRedo}
+                        >
+                            ↷ やり直す
+                        </button>
+                    </div>
+
+                    {recommendedSongs.map((recommended) => {
+                        const song = recommended.song
+
+                        const record =
+                            mode === "RANDOM"
+                                ? records[song.id].random
+                                : records[song.id].sRandom
+
+                        return (
+                            <div
+                                className="today-song-card"
+                                key={song.id}
+                            >
+                                <SongRow
+                                    song={song}
+                                    record={record}
+                                    onRecordChange={(newRecord) =>
+                                        onRecordChange(
+                                            song.id,
+                                            mode,
+                                            newRecord
+                                        )
+                                    }
+                                />
+
+                                {showReasons && (
+                                    <div className="today-song-reason">
+                                        {recommended.reason}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
+
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  )
+    )
 }
 
 export default TodayPage
