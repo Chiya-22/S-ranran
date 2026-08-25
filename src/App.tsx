@@ -58,18 +58,37 @@ function App() {
   const [sortOption, setSortOption] =
     useState<SortOption>("LEVEL_DESC")
 
-  const [minLevel, setMinLevel] = useState(10)
+  const [minLevel, setMinLevel] = useState(1)
   const [maxLevel, setMaxLevel] = useState(19)
 
   const [levelOrder, setLevelOrder] =
     useState<"ASC" | "DESC">("ASC")
+
+  const mergeRecordsWithSongs = (
+    savedRecords: SongRecords
+  ): SongRecords => {
+    const records = { ...savedRecords }
+
+    for (const song of initialSongs) {
+      if (!records[song.id]) {
+        records[song.id] = {
+          random: createEmptyRecord(),
+          sRandom: createEmptyRecord(),
+        }
+      }
+    }
+
+    return records
+  }
 
   const [records, setRecords] = useState<SongRecords>(() => {
     const savedRecords =
       localStorage.getItem(STORAGE_KEY)
 
     if (savedRecords) {
-      return JSON.parse(savedRecords)
+      return mergeRecordsWithSongs(
+        JSON.parse(savedRecords)
+      )
     }
 
     return createInitialRecords()
@@ -177,7 +196,9 @@ function App() {
           )
         }
 
-        setRecords(data.records)
+        setRecords(
+          mergeRecordsWithSongs(data.records)
+        )
 
         alert("データを読み込みました")
       } catch (error) {

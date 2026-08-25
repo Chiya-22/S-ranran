@@ -1,4 +1,4 @@
-import songsData from "./data/songs.json"
+import songsData from "./data/songs.updated.json"
 
 export type Song = {
   id: string
