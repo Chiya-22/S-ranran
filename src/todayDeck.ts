@@ -162,8 +162,8 @@ function calculateSongScore(
     const unplayedScore =
         isUnplayed
             ? unplayedFirst
-                ? 100
-                : 0
+                ? 200
+                : 50
             : 0
 
     // -------------------------
@@ -491,9 +491,9 @@ export function getDeckLevel(
 
     if (bestClearLevel !== null) {
         return {
-            level: bestClearLevel - 2,
+            level: Math.max(1, bestClearLevel - 2),
             source: "BEST_CLEAR",
-            label: "最高CLEAR Lv",
+            label: "暫定適正Lv",
         }
     }
 

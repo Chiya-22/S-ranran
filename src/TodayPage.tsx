@@ -33,6 +33,11 @@ type TodayPageProps = {
     onSetRecommendedSongs: (
         songs: RecommendedSong[]
     ) => void
+
+    mode: "RANDOM" | "S-RANDOM"
+    onModeChange: (
+        mode: "RANDOM" | "S-RANDOM"
+    ) => void
 }
 
 function TodayPage({
@@ -47,9 +52,10 @@ function TodayPage({
     canRedo,
     recommendedSongs,
     onSetRecommendedSongs,
+    mode,
+    onModeChange,
+
 }: TodayPageProps) {
-    const [mode, setMode] =
-        useState<"RANDOM" | "S-RANDOM">("S-RANDOM")
 
     const [purpose, setPurpose] =
         useState<DeckPurpose>("TRAINING")
@@ -67,21 +73,33 @@ function TodayPage({
             ? randomSkillResult
             : sRandomSkillResult
 
-    const handleCreateDeck = () => {
-        const newDeck = createTodayDeck(
-            songs,
-            records,
-            skillResult,
-            mode,
-            {
-                purpose,
-                count,
-                unplayedFirst,
-            }
-        )
+    const TODAY_DECK_KEY = "today-deck"
 
-        onSetRecommendedSongs(newDeck)
-    }
+const handleCreateDeck = () => {
+    const newDeck = createTodayDeck(
+        songs,
+        records,
+        skillResult,
+        mode,
+        {
+            purpose,
+            count,
+            unplayedFirst,
+        }
+    )
+
+    onSetRecommendedSongs(newDeck)
+
+    const savedDeck = newDeck.map((recommended) => ({
+        songId: recommended.song.id,
+        reason: recommended.reason,
+    }))
+
+    localStorage.setItem(
+        TODAY_DECK_KEY,
+        JSON.stringify(savedDeck)
+    )
+}
 
     return (
         <div className="today-page">
@@ -97,7 +115,7 @@ function TodayPage({
                     <select
                         value={mode}
                         onChange={(event) =>
-                            setMode(
+                            onModeChange(
                                 event.target.value as
                                 | "RANDOM"
                                 | "S-RANDOM"
