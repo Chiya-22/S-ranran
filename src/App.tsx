@@ -9,12 +9,47 @@ import SongListControls from "./SongListControls"
 import { calculateSkillLevel } from "./skillLevel"
 
 const STORAGE_KEY = "songRecords-v2"
+const TODAY_DECK_KEY = "today-deck"
 
 import type {
   PlayRecord,
   SongRecords,
 } from "./types"
 import { getDeckLevel, type RecommendedSong } from "./todayDeck"
+
+type AppSettings = {
+  levelSettings: {
+    random: {
+      minLevel: number
+      maxLevel: number
+    }
+    sRandom: {
+      minLevel: number
+      maxLevel: number
+    }
+  }
+  today: {
+    mode: "RANDOM" | "S-RANDOM"
+  }
+}
+
+const SETTINGS_KEY = "app-settings"
+
+const DEFAULT_SETTINGS: AppSettings = {
+  levelSettings: {
+    random: {
+      minLevel: 1,
+      maxLevel: 14,
+    },
+    sRandom: {
+      minLevel: 1,
+      maxLevel: 19,
+    },
+  },
+  today: {
+    mode: "S-RANDOM",
+  },
+}
 
 const createEmptyRecord = (): PlayRecord => ({
   history: [],
@@ -41,11 +76,54 @@ function App() {
   const [page, setPage] =
     useState<"ALL" | "RANDOM" | "S-RANDOM" | "TODAY">("S-RANDOM")
 
-  const [selectedLevel, setSelectedLevel] =
+  const [selectedRandomLevel, setSelectedRandomLevel] =
+    useState<string | null>(null)
+
+  const [selectedSRandomLevel, setSelectedSRandomLevel] =
     useState<string | null>(null)
 
   const [showDataMigration, setShowDataMigration] =
     useState(false)
+
+const [settings, setSettings] =
+  useState<AppSettings>(() => {
+    const saved =
+      localStorage.getItem(SETTINGS_KEY)
+
+    if (!saved) {
+      return DEFAULT_SETTINGS
+    }
+
+    try {
+      return {
+        ...DEFAULT_SETTINGS,
+        ...JSON.parse(saved),
+      }
+    } catch {
+      return DEFAULT_SETTINGS
+    }
+  })
+
+useEffect(() => {
+  localStorage.setItem(
+    SETTINGS_KEY,
+    JSON.stringify(settings)
+  )
+}, [settings])
+
+const minSranLevel =
+  settings.levelSettings.sRandom.minLevel
+
+const maxSranLevel =
+  settings.levelSettings.sRandom.maxLevel
+
+const minRandomLevel =
+  settings.levelSettings.random.minLevel
+
+const maxRandomLevel =
+  settings.levelSettings.random.maxLevel
+
+const todayMode = settings.today.mode
 
   const [showSettings, setShowSettings] = useState(false)
 
@@ -58,8 +136,6 @@ function App() {
   const [sortOption, setSortOption] =
     useState<SortOption>("LEVEL_DESC")
 
-  const [minLevel, setMinLevel] = useState(1)
-  const [maxLevel, setMaxLevel] = useState(19)
 
   const [levelOrder, setLevelOrder] =
     useState<"ASC" | "DESC">("ASC")
@@ -80,6 +156,73 @@ function App() {
 
     return records
   }
+
+  type SavedTodaySong = {
+    songId: string
+    reason: string
+}
+
+const handleSetRecommendedSongs = (
+    songs: RecommendedSong[]
+) => {
+    setRecommendedSongs(songs)
+
+    const savedSongs: SavedTodaySong[] =
+        songs.map((recommended) => ({
+            songId: recommended.song.id,
+            reason: recommended.reason,
+        }))
+
+    localStorage.setItem(
+        TODAY_DECK_KEY,
+        JSON.stringify(savedSongs)
+    )
+}
+
+useEffect(() => {
+    const saved =
+        localStorage.getItem(TODAY_DECK_KEY)
+
+    if (!saved) {
+        return
+    }
+
+    try {
+        const savedSongs: SavedTodaySong[] =
+            JSON.parse(saved)
+
+        const restoredSongs: RecommendedSong[] =
+            savedSongs
+                .map((savedSong) => {
+                    const song = songs.find(
+                        (song) =>
+                            song.id === savedSong.songId
+                    )
+
+                    if (!song) {
+                        return null
+                    }
+
+                    return {
+                        song,
+                        reason: savedSong.reason,
+                    }
+                })
+                .filter(
+                    (
+                        item
+                    ): item is RecommendedSong =>
+                        item !== null
+                )
+
+        setRecommendedSongs(restoredSongs)
+    } catch (error) {
+        console.error(
+            "今日のデッキの復元に失敗しました",
+            error
+        )
+    }
+}, [songs])
 
   const [records, setRecords] = useState<SongRecords>(() => {
     const savedRecords =
@@ -104,7 +247,22 @@ function App() {
     useState<string | null>(null)
 
   const [recommendedSongs, setRecommendedSongs] =
-    useState<RecommendedSong[]>([])
+    useState<RecommendedSong[]>(() => {
+        const saved =
+            localStorage.getItem(TODAY_DECK_KEY)
+
+        if (!saved) {
+            return []
+        }
+
+        try {
+            const savedSongs = JSON.parse(saved)
+
+            return savedSongs
+        } catch {
+            return []
+        }
+    })
 
   useEffect(() => {
     localStorage.setItem(
@@ -328,6 +486,7 @@ function App() {
       }
 
   const displayedSongs = songs
+    // ページでフィルタ
     .filter((song) => {
       if (page === "ALL") {
         return true
@@ -339,10 +498,22 @@ function App() {
 
       return song.sRandomLevel !== null
     })
+    // フォルダのレベルでフィルタ
     .filter((song) => {
+      // ALLではレベルによる絞り込みをしない
+      if (page === "ALL") {
+        return true
+      }
+
+      const selectedLevel =
+        page === "RANDOM"
+          ? selectedRandomLevel
+          : selectedSRandomLevel
+
       if (selectedLevel === null) {
         return true
       }
+
 
       const level =
         page === "RANDOM"
@@ -351,6 +522,7 @@ function App() {
 
       return String(level) === selectedLevel
     })
+    // フィルタオプションでフィルタ
     .filter((song) => {
       const record =
         mode === "RANDOM"
@@ -476,6 +648,39 @@ function App() {
     setRandomSongId(selectedSong.id)
   }
 
+  const randomLevels = Array.from(
+    new Set(
+      songs
+        .map((song) => song.randomLevel)
+        .filter(
+          (level): level is string =>
+            level !== null
+        )
+    )
+  )
+
+  const filteredRandomLevels = randomLevels
+    .filter((level) => {
+      const levelNumber =
+        Number(level.replace("乱Lv", ""))
+
+      return (
+        levelNumber >= minRandomLevel &&
+        levelNumber <= maxRandomLevel
+      )
+    })
+    .sort((a, b) => {
+      const aNumber =
+        Number(a.replace("乱Lv", ""))
+
+      const bNumber =
+        Number(b.replace("乱Lv", ""))
+
+      return levelOrder === "ASC"
+        ? aNumber - bNumber
+        : bNumber - aNumber
+    })
+
   const sRandomLevels = Array.from(
     new Set(
       songs
@@ -493,8 +698,8 @@ function App() {
         Number(level.replace("S乱Lv", ""))
 
       return (
-        levelNumber >= minLevel &&
-        levelNumber <= maxLevel
+        levelNumber >= minSranLevel &&
+        levelNumber <= maxSranLevel
       )
     })
     .sort((a, b) => {
@@ -515,7 +720,8 @@ function App() {
         <button
           onClick={() => {
             setPage("ALL")
-            setSelectedLevel(null)
+            setSelectedRandomLevel(null)
+            setSelectedSRandomLevel(null)
           }}
         >
           全曲
@@ -525,7 +731,8 @@ function App() {
           onClick={() => {
             setPage("RANDOM")
             setMode("RANDOM")
-            setSelectedLevel(null)
+            setSelectedRandomLevel(null)
+            setSelectedSRandomLevel(null)
           }}
         >
           RANDOM
@@ -535,7 +742,8 @@ function App() {
           onClick={() => {
             setPage("S-RANDOM")
             setMode("S-RANDOM")
-            setSelectedLevel(null)
+            setSelectedRandomLevel(null)
+            setSelectedSRandomLevel(null)
           }}
         >
           S-RANDOM
@@ -544,7 +752,8 @@ function App() {
         <button
           onClick={() => {
             setPage("TODAY")
-            setSelectedLevel(null)
+            setSelectedRandomLevel(null)
+            setSelectedSRandomLevel(null)
             setRandomSongId(null)
           }}
         >
@@ -592,300 +801,471 @@ function App() {
             canUndo={undoStack.length > 0}
             canRedo={redoStack.length > 0}
             recommendedSongs={recommendedSongs}
-            onSetRecommendedSongs={setRecommendedSongs}
+            onSetRecommendedSongs={handleSetRecommendedSongs}
+            mode={todayMode}
+  onModeChange={(newMode) => {
+    setSettings((prev) => ({
+      ...prev,
+      today: {
+        ...prev.today,
+        mode: newMode,
+      },
+    }))
+  }}
           />
         ) : (
-          page === "S-RANDOM" &&
-            selectedLevel === null ? (
-            <div>
-              <h2>S-RANDOM レベル一覧</h2>
+          <div>
+            {page === "RANDOM" &&
+              selectedRandomLevel === null && (
+                <div>
+                  <h2>RANDOM レベル一覧</h2>
 
-              <div> {/* レベルの範囲を選択するUI folder filter */}
-                <label>
-                  表示レベル：
-                  <select
-                    className="level-select"
-                    value={minLevel}
-                    onChange={(event) =>
-                      setMinLevel(
-                        Number(event.target.value)
-                      )
-                    }
-                  >
-                    {Array.from(
-                      { length: 19 },
-                      (_, i) => i + 1
-                    ).map((level) => (
-                      <option
-                        key={level}
-                        value={level}
+                  <div> {/* レベルの範囲を選択するUI folder filter */}
+                    <label>
+                      表示レベル：
+
+                      <select
+                        className="level-select"
+                        value={minRandomLevel}
+                        onChange={(event) =>
+                          setSettings((prev) => ({
+                            ...prev,
+                            levelSettings: {
+                              ...prev.levelSettings,
+                              random: {
+                                ...prev.levelSettings.random,
+                                minLevel: Number(event.target.value),
+                              },
+                            },
+                          }))
+                        }
                       >
-                        Lv{level}
-                      </option>
-                    ))}
-                  </select>
+                        {Array.from(
+                          { length: 14 },
+                          (_, i) => i + 1
+                        ).map((level) => (
+                          <option
+                            key={level}
+                            value={level}
+                          >
+                            Lv{level}
+                          </option>
+                        ))}
+                      </select>
 
-                  {" ～ "}
+                      {" ～ "}
 
-                  <select
-                    className="level-select"
-                    value={maxLevel}
-                    onChange={(event) =>
-                      setMaxLevel(
-                        Number(event.target.value)
-                      )
-                    }
-                  >
-                    {Array.from(
-                      { length: 19 },
-                      (_, i) => i + 1
-                    ).map((level) => (
-                      <option
-                        key={level}
-                        value={level}
+                      <select
+                        className="level-select"
+                        value={maxRandomLevel}
+                        onChange={(event) =>
+                          setSettings((prev) => ({
+                            ...prev,
+                            levelSettings: {
+                              ...prev.levelSettings,
+                              random: {
+                                ...prev.levelSettings.random,
+                                maxLevel: Number(event.target.value),
+                              },
+                            },
+                          }))
+                        }
                       >
-                        Lv{level}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div> {/* レベルの並び順を選択するUI folder sort */}
-                <label>
-                  並び順：
-                  <select
-                    className="level-select"
-                    value={levelOrder}
-                    onChange={(event) =>
-                      setLevelOrder(
-                        event.target.value as
-                        | "ASC"
-                        | "DESC"
-                      )
-                    }
-                  >
-                    <option value="ASC">
-                      昇順
-                    </option>
-                    <option value="DESC">
-                      降順
-                    </option>
-                  </select>
-                </label>
-              </div>
-
-              {/* レベルの一覧を表示するUI folder list */}
-              <div className="folder-list">
-                {filteredSRandomLevels.map((level) => {
-                  const levelSongs = songs.filter((song) => {
-                    return song.sRandomLevel === level
-                  })
-
-                  const clearCount = levelSongs.filter((song) => {
-                    const record = records[song.id].sRandom
-
-                    return record.history.some(
-                      (play) => play.result === "CLEAR"
-                    )
-                  }).length
-
-                  return (
-                    <button
-                      className="folder-button"
-                      key={level}
-                      onClick={() =>
-                        setSelectedLevel(level)
-                      }
-                    >
-                      <div className="folder-level">
-                        📁 {level}
-                      </div>
-
-                      <div className="folder-progress">
-                        {clearCount} / {levelSongs.length}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-
-            </div>
-          ) : (
-            <>
-              {page === "S-RANDOM" && (
-                <>
-                  <button
-                    onClick={() => {
-                      setSelectedLevel(null)
-                      setRandomSongId(null)
-                    }}
-                  >
-                    ← レベル一覧に戻る
-                  </button>
-
-                  <button
-                    className="random-song-button"
-                    onClick={handleRandomSong}
-                  >
-                    🎲 ランダム選曲
-                  </button>
-                </>
-              )}
-
-              {randomSongId !== null && (
-                <div className="random-song-result">
-                  <div className="random-song-label">
-                    ランダム選曲
+                        {Array.from(
+                          { length: 14 },
+                          (_, i) => i + 1
+                        ).map((level) => (
+                          <option
+                            key={level}
+                            value={level}
+                          >
+                            Lv{level}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   </div>
 
-                  {(() => {
-                    const song = displayedSongs.find(
-                      (song) => song.id === randomSongId
-                    )
+                  <div> {/* レベルの並び順を選択するUI folder sort */}
+                    <label>
+                      並び順：
 
-                    if (!song) {
-                      return null
-                    }
+                      <select
+                        className="level-select"
+                        value={levelOrder}
+                        onChange={(event) =>
+                          setLevelOrder(
+                            event.target.value as
+                            | "ASC"
+                            | "DESC"
+                          )
+                        }
+                      >
+                        <option value="ASC">
+                          昇順
+                        </option>
 
-                    return (
-                      <div className="random-song-card">
-                        <div className="random-song-title">
-                          {song.title}
-                        </div>
+                        <option value="DESC">
+                          降順
+                        </option>
+                      </select>
+                    </label>
+                  </div>
 
-                        <div className="random-song-level">
-                          Lv {song.level}
-                        </div>
-                      </div>
-                    )
-                  })()}
+                  <div className="folder-list"> {/* レベルの一覧を表示するUI folder list */}
+                    {filteredRandomLevels.map((level) => {
+                      const levelSongs = songs.filter((song) => {
+                        return song.randomLevel === level
+                      })
+
+                      const clearCount = levelSongs.filter((song) => {
+                        const record = records[song.id].random
+
+                        return record.history.some(
+                          (play) => play.result === "CLEAR"
+                        )
+                      }).length
+
+                      return (
+                        <button
+                          className="folder-button"
+                          key={level}
+                          onClick={() =>
+                            setSelectedRandomLevel(level)
+                          }
+                        >
+                          <div className="folder-level">
+                            📁 {level}
+                          </div>
+
+                          <div className="folder-progress">
+                            {clearCount} / {levelSongs.length}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+
                 </div>
               )}
+            {page === "S-RANDOM" &&
+              selectedSRandomLevel === null && (
+                <div>
 
-              {randomSong ? (
-                <>
-                  <div className="random-song-controls">
-                    <button
+                  <h2>S-RANDOM レベル一覧</h2>
 
-                      onClick={() => setRandomSongId(null)}
-                    >
-                      ← 一覧に戻る
-                    </button>
-
-                    <button
-                      className="random-song-button"
-                      onClick={handleRandomSong}
-                    >
-                      🎲 もう一度
-                    </button>
-                  </div>
-
-
-                  {(() => {
-                    const record =
-                      mode === "RANDOM"
-                        ? records[randomSong.id].random
-                        : records[randomSong.id].sRandom
-
-                    return (
-                      <SongRow
-                        key={`${mode}-${randomSong.id}`}
-                        song={randomSong}
-                        record={record}
-                        onRecordChange={(newRecord) => {
-                          setRecords((prev) => {
-                            setUndoStack((undoPrev) => [
-                              ...undoPrev,
-                              prev,
-                            ])
-
-                            setRedoStack([])
-
-                            return {
-                              ...prev,
-                              [randomSong.id]: {
-                                ...prev[randomSong.id],
-                                [mode === "RANDOM"
-                                  ? "random"
-                                  : "sRandom"]: newRecord,
-                              },
-                            }
-                          })
-                        }}
-                      />
-                    )
-                  })()}
-                </>
-              ) : (
-                <>
-                  {/* 通常時だけフィルタ・並び順 */}
-                  <SongListControls
-                    filterOption={filterOption}
-                    setFilterOption={setFilterOption}
-                    sortOption={sortOption}
-                    setSortOption={setSortOption}
-                  />
-
-                  <div className="history-actions">
-                    <button
-                      className="history-action-button"
-                      onClick={handleUndo}
-                      disabled={undoStack.length === 0}
-                    >
-                      ↶ 元に戻す
-                    </button>
-
-                    <button
-                      className="history-action-button"
-                      onClick={handleRedo}
-                      disabled={redoStack.length === 0}
-                    >
-                      ↷ やり直す
-                    </button>
-                  </div>
-
-
-                  {displayedSongs.map((song) => {
-                    const record =
-                      mode === "RANDOM"
-                        ? records[song.id].random
-                        : records[song.id].sRandom
-
-                    return (
-                      <SongRow
-                        key={`${mode}-${song.id}`}
-                        song={song}
-                        record={record}
-                        onRecordChange={(newRecord) => {
-                          // 現在の状態をUNDO用に保存
-                          setUndoStack((prev) => [
+                  <div> {/* レベルの範囲を選択するUI folder filter */}
+                    <label>
+                      表示レベル：
+                      <select
+                        className="level-select"
+                        value={minSranLevel}
+                        onChange={(event) =>
+                          setSettings((prev) => ({
                             ...prev,
-                            records,
-                          ])
-
-                          // 新しい操作をしたのでREDOは消す
-                          setRedoStack([])
-
-                          // recordsを更新
-                          setRecords({
-                            ...records,
-                            [song.id]: {
-                              ...records[song.id],
-                              [mode === "RANDOM"
-                                ? "random"
-                                : "sRandom"]: newRecord,
+                            levelSettings: {
+                              ...prev.levelSettings,
+                              sRandom: {
+                                ...prev.levelSettings.sRandom,
+                                minLevel: Number(event.target.value),
+                              },
                             },
-                          })
-                        }}
-                      />
-                    )
-                  })}
-                </>
+                          }))
+                        }
+                      >
+                        {Array.from(
+                          { length: 19 },
+                          (_, i) => i + 1
+                        ).map((level) => (
+                          <option
+                            key={level}
+                            value={level}
+                          >
+                            Lv{level}
+                          </option>
+                        ))}
+                      </select>
+
+                      {" ～ "}
+
+                      <select
+                        className="level-select"
+                        value={maxSranLevel}
+                        onChange={(event) =>
+                          setSettings((prev) => ({
+                            ...prev,
+                            levelSettings: {
+                              ...prev.levelSettings,
+                              sRandom: {
+                                ...prev.levelSettings.sRandom,
+                                maxLevel: Number(event.target.value),
+                              },
+                            },
+                          }))
+                        }
+                      >
+                        {Array.from(
+                          { length: 19 },
+                          (_, i) => i + 1
+                        ).map((level) => (
+                          <option
+                            key={level}
+                            value={level}
+                          >
+                            Lv{level}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div> {/* レベルの並び順を選択するUI folder sort */}
+                    <label>
+                      並び順：
+                      <select
+                        className="level-select"
+                        value={levelOrder}
+                        onChange={(event) =>
+                          setLevelOrder(
+                            event.target.value as
+                            | "ASC"
+                            | "DESC"
+                          )
+                        }
+                      >
+                        <option value="ASC">
+                          昇順
+                        </option>
+                        <option value="DESC">
+                          降順
+                        </option>
+                      </select>
+                    </label>
+                  </div>
+
+
+                  <div className="folder-list"> {/* レベルの一覧を表示するUI folder list */}
+                    {filteredSRandomLevels.map((level) => {
+                      const levelSongs = songs.filter((song) => {
+                        return song.sRandomLevel === level
+                      })
+
+                      const clearCount = levelSongs.filter((song) => {
+                        const record = records[song.id].sRandom
+
+                        return record.history.some(
+                          (play) => play.result === "CLEAR"
+                        )
+                      }).length
+
+                      return (
+                        <button
+                          className="folder-button"
+                          key={level}
+                          onClick={() =>
+                            setSelectedSRandomLevel(level)
+                          }
+                        >
+                          <div className="folder-level">
+                            📁 {level}
+                          </div>
+
+                          <div className="folder-progress">
+                            {clearCount} / {levelSongs.length}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                </div>
+
               )}
-            </>
-          )
+            {
+              <>
+                {(selectedRandomLevel !== null
+                  || selectedSRandomLevel !== null) && (
+                    <>
+                      {(
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedSRandomLevel(null)
+                              setSelectedRandomLevel(null)
+                              setRandomSongId(null)
+                            }}
+                          >
+                            ← レベル一覧に戻る
+                          </button>
+
+                          <button
+                            className="random-song-button"
+                            onClick={handleRandomSong}
+                          >
+                            🎲 ランダム選曲
+                          </button>
+                        </>
+                      )}
+
+                      {randomSongId !== null && (
+                        <div className="random-song-result">
+                          <div className="random-song-label">
+                            ランダム選曲
+                          </div>
+
+                          {(() => {
+                            const song = displayedSongs.find(
+                              (song) => song.id === randomSongId
+                            )
+
+                            if (!song) {
+                              return null
+                            }
+
+                            return (
+                              <div className="random-song-card">
+                                <div className="random-song-title">
+                                  {song.title}
+                                </div>
+
+                                <div className="random-song-level">
+                                  Lv {song.level}
+                                </div>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )}
+
+                      {randomSong ? (
+                        <>
+                          <div className="random-song-controls">
+                            <button
+
+                              onClick={() => setRandomSongId(null)}
+                            >
+                              ← 一覧に戻る
+                            </button>
+
+                            <button
+                              className="random-song-button"
+                              onClick={handleRandomSong}
+                            >
+                              🎲 もう一度
+                            </button>
+                          </div>
+
+
+                          {(() => {
+                            const record =
+                              mode === "RANDOM"
+                                ? records[randomSong.id].random
+                                : records[randomSong.id].sRandom
+
+                            return (
+                              <SongRow
+                                key={`${mode}-${randomSong.id}`}
+                                song={randomSong}
+                                record={record}
+                                onRecordChange={(newRecord) => {
+                                  setRecords((prev) => {
+                                    setUndoStack((undoPrev) => [
+                                      ...undoPrev,
+                                      prev,
+                                    ])
+
+                                    setRedoStack([])
+
+                                    return {
+                                      ...prev,
+                                      [randomSong.id]: {
+                                        ...prev[randomSong.id],
+                                        [mode === "RANDOM"
+                                          ? "random"
+                                          : "sRandom"]: newRecord,
+                                      },
+                                    }
+                                  })
+                                }}
+                              />
+                            )
+                          })()}
+                        </>
+                      ) : (
+                        <>
+                          {/* 通常時だけフィルタ・並び順 */}
+                          <SongListControls
+                            filterOption={filterOption}
+                            setFilterOption={setFilterOption}
+                            sortOption={sortOption}
+                            setSortOption={setSortOption}
+                          />
+
+                          <div className="history-actions">
+                            <button
+                              className="history-action-button"
+                              onClick={handleUndo}
+                              disabled={undoStack.length === 0}
+                            >
+                              ↶ 元に戻す
+                            </button>
+
+                            <button
+                              className="history-action-button"
+                              onClick={handleRedo}
+                              disabled={redoStack.length === 0}
+                            >
+                              ↷ やり直す
+                            </button>
+                          </div>
+
+
+                          {displayedSongs.map((song) => {
+                            const record =
+                              mode === "RANDOM"
+                                ? records[song.id].random
+                                : records[song.id].sRandom
+
+                            return (
+                              <SongRow
+                                key={`${mode}-${song.id}`}
+                                song={song}
+                                record={record}
+                                onRecordChange={(newRecord) => {
+                                  // 現在の状態をUNDO用に保存
+                                  setUndoStack((prev) => [
+                                    ...prev,
+                                    records,
+                                  ])
+
+                                  // 新しい操作をしたのでREDOは消す
+                                  setRedoStack([])
+
+                                  // recordsを更新
+                                  setRecords({
+                                    ...records,
+                                    [song.id]: {
+                                      ...records[song.id],
+                                      [mode === "RANDOM"
+                                        ? "random"
+                                        : "sRandom"]: newRecord,
+                                    },
+                                  })
+                                }}
+                              />
+                            )
+                          })}
+                        </>
+                      )}
+                    </>
+                  )}
+              </>
+            }
+          </div>
         )}
+
+
 
 
       </div>

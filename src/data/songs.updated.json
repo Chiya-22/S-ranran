@@ -92,7 +92,7 @@
     "title": "サイレント(EX)",
     "genre": "[17]サイレント(EX)",
     "level": 50,
-    "randomLevel": null,
+    "randomLevel": "乱Lv14",
     "sRandomLevel": "S乱Lv19"
   },
   {
@@ -180,7 +180,7 @@
     "title": "ダージュ(EX)",
     "genre": "[20]ダージュ(EX)",
     "level": 50,
-    "randomLevel": null,
+    "randomLevel": "乱Lv13",
     "sRandomLevel": "S乱Lv18"
   },
   {
@@ -188,7 +188,7 @@
     "title": "トイコンテンポラリー(EX)",
     "genre": "[16]トイコンテンポラリー(EX)",
     "level": 50,
-    "randomLevel": null,
+    "randomLevel": "乱Lv12",
     "sRandomLevel": "S乱Lv18"
   },
   {
@@ -402,9 +402,9 @@
   {
     "id": "ex-15",
     "title": "スケールアウト(EX)",
-    "genre": "[19]スケールアウト(H)",
+    "genre": "[19]スケールアウト(EX)",
     "level": 49,
-    "randomLevel": "乱Lv5",
+    "randomLevel": "乱Lv11",
     "sRandomLevel": "S乱Lv17"
   },
   {
@@ -580,7 +580,7 @@
     "title": "ジャッジメント(EX)",
     "genre": "[SP]ジャッジメント(EX)",
     "level": 49,
-    "randomLevel": null,
+    "randomLevel": "乱Lv10",
     "sRandomLevel": "S乱Lv16"
   },
   {
@@ -724,7 +724,7 @@
     "title": "Vinculum stellarum(EX)",
     "genre": "[pe]アンセムトランス(EX)",
     "level": 49,
-    "randomLevel": "乱Lv1",
+    "randomLevel": "乱Lv10",
     "sRandomLevel": "S乱Lv15"
   },
   {
@@ -1028,7 +1028,7 @@
     "title": "Metamorphose(EX)",
     "genre": "[LT]ダークオーラ(EX)",
     "level": 48,
-    "randomLevel": null,
+    "randomLevel": "乱Lv9",
     "sRandomLevel": "S乱Lv14"
   },
   {
@@ -1228,7 +1228,7 @@
     "title": "Festum Duodecimum!(EX)",
     "genre": "[pe]クラシック12(EX)",
     "level": 49,
-    "randomLevel": "乱Lv14",
+    "randomLevel": null,
     "sRandomLevel": "S乱Lv13"
   },
   {
@@ -1236,7 +1236,7 @@
     "title": "Last Twilight(EX)",
     "genre": "[pe] メカニカルアートコア(H)",
     "level": 49,
-    "randomLevel": "乱Lv1",
+    "randomLevel": "乱Lv9",
     "sRandomLevel": "S乱Lv13"
   },
   {
@@ -2012,7 +2012,7 @@
     "title": "朱と碧のランページ(ReGLOSS)(EX)",
     "genre": "[JF/Li/版権]朱と碧のランページ(EX)",
     "level": 47,
-    "randomLevel": null,
+    "randomLevel": "乱Lv4",
     "sRandomLevel": "S乱Lv11"
   },
   {
@@ -2172,7 +2172,7 @@
     "title": "ハードPf(EX)",
     "genre": "[13]ハードPf(EX)",
     "level": 48,
-    "randomLevel": "乱Lv14",
+    "randomLevel": "乱Lv7",
     "sRandomLevel": "S乱Lv11"
   },
   {
@@ -2204,7 +2204,7 @@
     "title": "亜空間ジャズ(EX)",
     "genre": "[16]亜空間ジャズ(EX)",
     "level": 48,
-    "randomLevel": null,
+    "randomLevel": "乱Lv8",
     "sRandomLevel": "S乱Lv10"
   },
   {
@@ -2856,14 +2856,6 @@
     "sRandomLevel": "S乱Lv19"
   },
   {
-    "id": "memories",
-    "title": "memories...(EX)",
-    "genre": "[CS10]シンパシー3(EX)",
-    "level": 42,
-    "randomLevel": "乱Lv14",
-    "sRandomLevel": null
-  },
-  {
     "id": "song-20",
     "title": "千年ノ理(EX)",
     "genre": "[LT/版権]ワールドエレクトロニカ(EX)",
@@ -3068,7 +3060,7 @@
     "title": "バンブーソード・ガール(EX)",
     "genre": "[LT/版権]J-スピードメタル(EX)",
     "level": 47,
-    "randomLevel": null,
+    "randomLevel": "乱Lv7",
     "sRandomLevel": "S乱Lv9"
   },
   {
@@ -4636,7 +4628,7 @@
     "title": "KING of the SEA(EX)",
     "genre": "[13]カイゾク(EX)",
     "level": 47,
-    "randomLevel": null,
+    "randomLevel": "乱Lv6",
     "sRandomLevel": "S乱Lv5"
   },
   {
@@ -5604,7 +5596,7 @@
     "title": "home.(kors k Remix)(EX)",
     "genre": "[pe]ヒーリングデュオREMIX(EX)",
     "level": 45,
-    "randomLevel": null,
+    "randomLevel": "乱Lv2",
     "sRandomLevel": "S乱Lv4"
   },
   {
@@ -5780,7 +5772,7 @@
     "title": "革命パッショネイト(EX)",
     "genre": "[pe]ギャラクティックシンフォニー(EX)",
     "level": 47,
-    "randomLevel": null,
+    "randomLevel": "乱Lv10",
     "sRandomLevel": "S乱Lv3"
   },
   {
@@ -6740,7 +6732,7 @@
     "title": "天鈴少女(EX)",
     "genre": "[pe]かぞえうた(EX)",
     "level": 45,
-    "randomLevel": null,
+    "randomLevel": "乱Lv3",
     "sRandomLevel": "S乱Lv2"
   },
   {
